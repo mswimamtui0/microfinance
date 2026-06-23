@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { loanAPI, productAPI, customerAPI } from '../api';
 import LoanApplication from '../components/Loans/LoanApplication';
@@ -12,13 +12,19 @@ const Loans = () => {
   const [selectedLoan, setSelectedLoan] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
-  const [viewMode, setViewMode] = useState('all'); // all, pending, approved, active
+  const [viewMode, setViewMode] = useState('all');
 
   const queryClient = useQueryClient();
 
-  const { data: loans, isLoading: loansLoading } = useQuery({
+  // Fetch loans with ALL statuses included
+  const { data: loans, isLoading: loansLoading, refetch } = useQuery({
     queryKey: ['loans', searchTerm, statusFilter],
-    queryFn: () => loanAPI.getAll({ search: searchTerm, status: statusFilter }),
+    queryFn: () => loanAPI.getAll({ 
+      search: searchTerm, 
+      status: statusFilter || undefined 
+    }),
+    // Ensure we refetch after mutations
+    refetchOnWindowFocus: true,
   });
 
   const { data: products } = useQuery({
@@ -36,6 +42,7 @@ const Loans = () => {
     onSuccess: () => {
       queryClient.invalidateQueries(['loans']);
       toast.success('Loan approved successfully');
+      refetch();
     },
     onError: (error) => {
       toast.error(error.response?.data?.error || 'Failed to approve loan');
@@ -47,6 +54,7 @@ const Loans = () => {
     onSuccess: () => {
       queryClient.invalidateQueries(['loans']);
       toast.success('Loan disbursed successfully');
+      refetch();
     },
     onError: (error) => {
       toast.error(error.response?.data?.error || 'Failed to disburse loan');
@@ -65,17 +73,31 @@ const Loans = () => {
       paid: 'bg-gray-100 text-gray-800',
       defaulted: 'bg-red-100 text-red-800',
       rejected: 'bg-red-100 text-red-800',
+      'written_off': 'bg-red-100 text-red-800',
     };
     return colors[status] || 'bg-gray-100 text-gray-800';
   };
 
+  // Get all loans
+  const allLoans = loans?.data?.results || [];
+
   // Filter loans based on view mode
-  const filteredLoans = loans?.data?.results?.filter(loan => {
+  const filteredLoans = allLoans.filter(loan => {
     if (viewMode === 'pending') return loan.status === 'pending';
     if (viewMode === 'approved') return loan.status === 'approved';
     if (viewMode === 'active') return loan.status === 'active';
-    return true;
+    if (viewMode === 'draft') return loan.status === 'draft';
+    return true; // 'all' shows everything
   });
+
+  // Count loans by status for tabs
+  const counts = {
+    all: allLoans.length,
+    pending: allLoans.filter(l => l.status === 'pending').length,
+    approved: allLoans.filter(l => l.status === 'approved').length,
+    active: allLoans.filter(l => l.status === 'active').length,
+    draft: allLoans.filter(l => l.status === 'draft').length,
+  };
 
   return (
     <div className="space-y-6">
@@ -90,70 +112,90 @@ const Loans = () => {
         </button>
       </div>
 
-      {/* View Tabs */}
+      {/* View Tabs with Counts */}
       <div style={{
         display: 'flex',
-        gap: '12px',
+        gap: '8px',
         background: 'white',
-        padding: '12px',
+        padding: '8px',
         borderRadius: '12px',
-        border: '1px solid #e5e7eb'
+        border: '1px solid #e5e7eb',
+        flexWrap: 'wrap'
       }}>
         <button
           onClick={() => setViewMode('all')}
           style={{
-            padding: '8px 20px',
+            padding: '8px 16px',
             borderRadius: '8px',
             border: 'none',
             background: viewMode === 'all' ? '#0284c7' : 'transparent',
             color: viewMode === 'all' ? 'white' : '#4b5563',
             cursor: 'pointer',
-            fontWeight: '500'
+            fontWeight: '500',
+            fontSize: '14px'
           }}
         >
-          All Loans
+          All Loans ({counts.all})
+        </button>
+        <button
+          onClick={() => setViewMode('draft')}
+          style={{
+            padding: '8px 16px',
+            borderRadius: '8px',
+            border: 'none',
+            background: viewMode === 'draft' ? '#9ca3af' : 'transparent',
+            color: viewMode === 'draft' ? 'white' : '#4b5563',
+            cursor: 'pointer',
+            fontWeight: '500',
+            fontSize: '14px'
+          }}
+        >
+          Draft ({counts.draft})
         </button>
         <button
           onClick={() => setViewMode('pending')}
           style={{
-            padding: '8px 20px',
+            padding: '8px 16px',
             borderRadius: '8px',
             border: 'none',
             background: viewMode === 'pending' ? '#f59e0b' : 'transparent',
             color: viewMode === 'pending' ? 'white' : '#4b5563',
             cursor: 'pointer',
-            fontWeight: '500'
+            fontWeight: '500',
+            fontSize: '14px'
           }}
         >
-          Pending
+          Pending ({counts.pending})
         </button>
         <button
           onClick={() => setViewMode('approved')}
           style={{
-            padding: '8px 20px',
+            padding: '8px 16px',
             borderRadius: '8px',
             border: 'none',
             background: viewMode === 'approved' ? '#3b82f6' : 'transparent',
             color: viewMode === 'approved' ? 'white' : '#4b5563',
             cursor: 'pointer',
-            fontWeight: '500'
+            fontWeight: '500',
+            fontSize: '14px'
           }}
         >
-          Approved
+          Approved ({counts.approved})
         </button>
         <button
           onClick={() => setViewMode('active')}
           style={{
-            padding: '8px 20px',
+            padding: '8px 16px',
             borderRadius: '8px',
             border: 'none',
             background: viewMode === 'active' ? '#22c55e' : 'transparent',
             color: viewMode === 'active' ? 'white' : '#4b5563',
             cursor: 'pointer',
-            fontWeight: '500'
+            fontWeight: '500',
+            fontSize: '14px'
           }}
         >
-          Active
+          Active ({counts.active})
         </button>
       </div>
 
@@ -201,62 +243,78 @@ const Loans = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {filteredLoans?.map((loan) => (
-                <tr key={loan.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    {loan.loan_no}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {loan.customer_details?.first_name} {loan.customer_details?.last_name}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {loan.product_details?.product_name}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {formatCurrency(loan.principal)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(loan.status)}`}>
-                      {loan.status}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {formatCurrency(loan.outstanding_balance)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">
-                    <button
-                      onClick={() => setSelectedLoan(loan)}
-                      className="text-primary-600 hover:text-primary-900 font-medium mr-2"
-                    >
-                      View
-                    </button>
-                    {loan.status === 'pending' && (
-                      <button
-                        onClick={() => approveMutation.mutate(loan.id)}
-                        className="text-green-600 hover:text-green-900 font-medium mr-2"
-                      >
-                        Approve
-                      </button>
-                    )}
-                    {loan.status === 'approved' && (
-                      <button
-                        onClick={() => disburseMutation.mutate(loan.id)}
-                        className="text-blue-600 hover:text-blue-900 font-medium mr-2"
-                      >
-                        Disburse
-                      </button>
-                    )}
-                    {loan.status === 'active' && (
-                      <button
-                        onClick={() => window.location.href = `/payments/new?loan=${loan.id}`}
-                        className="text-purple-600 hover:text-purple-900 font-medium"
-                      >
-                        Receive Payment
-                      </button>
-                    )}
+              {filteredLoans.length === 0 ? (
+                <tr>
+                  <td colSpan="7" className="px-6 py-8 text-center text-gray-500">
+                    No loans found. Click "New Loan" to create one.
                   </td>
                 </tr>
-              ))}
+              ) : (
+                filteredLoans.map((loan) => (
+                  <tr key={loan.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                      {loan.loan_no}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {loan.customer_details?.first_name} {loan.customer_details?.last_name}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {loan.product_details?.product_name}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {formatCurrency(loan.principal)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(loan.status)}`}>
+                        {loan.status}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {formatCurrency(loan.outstanding_balance)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      <button
+                        onClick={() => setSelectedLoan(loan)}
+                        className="text-primary-600 hover:text-primary-900 font-medium mr-2"
+                      >
+                        View
+                      </button>
+                      {loan.status === 'pending' && (
+                        <button
+                          onClick={() => approveMutation.mutate(loan.id)}
+                          className="text-green-600 hover:text-green-900 font-medium mr-2"
+                        >
+                          Approve
+                        </button>
+                      )}
+                      {loan.status === 'approved' && (
+                        <button
+                          onClick={() => disburseMutation.mutate(loan.id)}
+                          className="text-blue-600 hover:text-blue-900 font-medium mr-2"
+                        >
+                          Disburse
+                        </button>
+                      )}
+                      {loan.status === 'active' && (
+                        <button
+                          onClick={() => window.location.href = `/payments/new?loan=${loan.id}`}
+                          className="text-purple-600 hover:text-purple-900 font-medium"
+                        >
+                          Receive Payment
+                        </button>
+                      )}
+                      {loan.status === 'draft' && (
+                        <button
+                          onClick={() => approveMutation.mutate(loan.id)}
+                          className="text-green-600 hover:text-green-900 font-medium"
+                        >
+                          Submit for Approval
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
