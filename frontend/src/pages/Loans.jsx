@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { loanAPI, productAPI, customerAPI } from '../api';
 import LoanApplication from '../components/Loans/LoanApplication';
@@ -16,15 +16,15 @@ const Loans = () => {
 
   const queryClient = useQueryClient();
 
-  // Fetch loans with ALL statuses included
+  // Fetch loans - ensure we get ALL loans
   const { data: loans, isLoading: loansLoading, refetch } = useQuery({
     queryKey: ['loans', searchTerm, statusFilter],
     queryFn: () => loanAPI.getAll({ 
       search: searchTerm, 
       status: statusFilter || undefined 
     }),
-    // Ensure we refetch after mutations
     refetchOnWindowFocus: true,
+    staleTime: 0,
   });
 
   const { data: products } = useQuery({
@@ -63,6 +63,11 @@ const Loans = () => {
 
   if (loansLoading) return <Loading />;
 
+  // Get all loans from the response
+  const allLoans = loans?.data?.results || [];
+  
+  console.log('All loans from API:', allLoans); // Debug log
+
   const getStatusColor = (status) => {
     const colors = {
       draft: 'bg-gray-100 text-gray-800',
@@ -73,13 +78,9 @@ const Loans = () => {
       paid: 'bg-gray-100 text-gray-800',
       defaulted: 'bg-red-100 text-red-800',
       rejected: 'bg-red-100 text-red-800',
-      'written_off': 'bg-red-100 text-red-800',
     };
     return colors[status] || 'bg-gray-100 text-gray-800';
   };
-
-  // Get all loans
-  const allLoans = loans?.data?.results || [];
 
   // Filter loans based on view mode
   const filteredLoans = allLoans.filter(loan => {
@@ -87,17 +88,21 @@ const Loans = () => {
     if (viewMode === 'approved') return loan.status === 'approved';
     if (viewMode === 'active') return loan.status === 'active';
     if (viewMode === 'draft') return loan.status === 'draft';
-    return true; // 'all' shows everything
+    return true;
   });
 
-  // Count loans by status for tabs
+  // Count loans by status
   const counts = {
     all: allLoans.length,
+    draft: allLoans.filter(l => l.status === 'draft').length,
     pending: allLoans.filter(l => l.status === 'pending').length,
     approved: allLoans.filter(l => l.status === 'approved').length,
     active: allLoans.filter(l => l.status === 'active').length,
-    draft: allLoans.filter(l => l.status === 'draft').length,
   };
+
+  // Also check the raw response for debugging
+  console.log('All loans count:', allLoans.length);
+  console.log('Filtered loans count:', filteredLoans.length);
 
   return (
     <div className="space-y-6">
@@ -279,6 +284,14 @@ const Loans = () => {
                       >
                         View
                       </button>
+                      {loan.status === 'draft' && (
+                        <button
+                          onClick={() => approveMutation.mutate(loan.id)}
+                          className="text-green-600 hover:text-green-900 font-medium"
+                        >
+                          Submit for Approval
+                        </button>
+                      )}
                       {loan.status === 'pending' && (
                         <button
                           onClick={() => approveMutation.mutate(loan.id)}
@@ -303,14 +316,6 @@ const Loans = () => {
                           Receive Payment
                         </button>
                       )}
-                      {loan.status === 'draft' && (
-                        <button
-                          onClick={() => approveMutation.mutate(loan.id)}
-                          className="text-green-600 hover:text-green-900 font-medium"
-                        >
-                          Submit for Approval
-                        </button>
-                      )}
                     </td>
                   </tr>
                 ))
@@ -323,7 +328,10 @@ const Loans = () => {
       {/* Loan Application Modal */}
       {showApplication && (
         <LoanApplication
-          onClose={() => setShowApplication(false)}
+          onClose={() => {
+            setShowApplication(false);
+            refetch();
+          }}
           products={products?.data?.results || []}
           customers={customers?.data?.results || []}
         />
