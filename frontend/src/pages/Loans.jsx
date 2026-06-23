@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { loanAPI, productAPI, customerAPI } from '../api';
 import LoanApplication from '../components/Loans/LoanApplication';
@@ -13,48 +13,71 @@ const Loans = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [viewMode, setViewMode] = useState('all');
-  const [authError, setAuthError] = useState(null);
 
   const queryClient = useQueryClient();
 
-  // Check if user is authenticated
-  const token = localStorage.getItem('access_token');
-  console.log('Token present:', !!token);
-
-  // Fetch loans with proper error handling
-  const { data: loans, isLoading: loansLoading, error, refetch } = useQuery({
+  // Fetch ALL loans - ensure we get data
+  const { data: loans, isLoading: loansLoading, refetch, error } = useQuery({
     queryKey: ['loans', searchTerm, statusFilter],
-    queryFn: async () => {
+    queryFn: () => {
       console.log('Fetching loans...');
-      try {
-        const response = await loanAPI.getAll({ 
-          search: searchTerm, 
-          status: statusFilter || undefined 
-        });
-        console.log('Loans response:', response.data);
-        return response;
-      } catch (err) {
-        console.error('Error fetching loans:', err);
-        setAuthError(err.response?.status === 401 ? 'Please login again' : 'Error fetching loans');
-        throw err;
-      }
+      return loanAPI.getAll({ 
+        search: searchTerm, 
+        status: statusFilter || undefined 
+      });
     },
-    retry: 1,
     refetchOnWindowFocus: true,
     staleTime: 0,
   });
 
+  // Log the data
+  console.log('Loans data:', loans);
+
   const { data: products } = useQuery({
     queryKey: ['products'],
     queryFn: () => productAPI.getAll(),
-    retry: 1,
   });
 
   const { data: customers } = useQuery({
     queryKey: ['customers'],
     queryFn: () => customerAPI.getAll({ limit: 1000 }),
-    retry: 1,
   });
+
+  // Get all loans
+  const allLoans = loans?.data?.results || [];
+  
+  console.log('All loans count:', allLoans.length);
+
+  const getStatusColor = (status) => {
+    const colors = {
+      draft: 'bg-gray-100 text-gray-800',
+      pending: 'bg-yellow-100 text-yellow-800',
+      approved: 'bg-blue-100 text-blue-800',
+      disbursed: 'bg-purple-100 text-purple-800',
+      active: 'bg-green-100 text-green-800',
+      paid: 'bg-gray-100 text-gray-800',
+      defaulted: 'bg-red-100 text-red-800',
+      rejected: 'bg-red-100 text-red-800',
+    };
+    return colors[status] || 'bg-gray-100 text-gray-800';
+  };
+
+  // Filter loans based on view mode
+  const filteredLoans = allLoans.filter(loan => {
+    if (viewMode === 'pending') return loan.status === 'pending';
+    if (viewMode === 'approved') return loan.status === 'approved';
+    if (viewMode === 'active') return loan.status === 'active';
+    if (viewMode === 'draft') return loan.status === 'draft';
+    return true;
+  });
+
+  const counts = {
+    all: allLoans.length,
+    draft: allLoans.filter(l => l.status === 'draft').length,
+    pending: allLoans.filter(l => l.status === 'pending').length,
+    approved: allLoans.filter(l => l.status === 'approved').length,
+    active: allLoans.filter(l => l.status === 'active').length,
+  };
 
   const approveMutation = useMutation({
     mutationFn: (id) => loanAPI.approve(id),
@@ -80,57 +103,10 @@ const Loans = () => {
     },
   });
 
-  // Get all loans from the response
-  const allLoans = loans?.data?.results || [];
-  
-  console.log('All loans from API:', allLoans.length);
-
-  const getStatusColor = (status) => {
-    const colors = {
-      draft: 'bg-gray-100 text-gray-800',
-      pending: 'bg-yellow-100 text-yellow-800',
-      approved: 'bg-blue-100 text-blue-800',
-      disbursed: 'bg-purple-100 text-purple-800',
-      active: 'bg-green-100 text-green-800',
-      paid: 'bg-gray-100 text-gray-800',
-      defaulted: 'bg-red-100 text-red-800',
-      rejected: 'bg-red-100 text-red-800',
-    };
-    return colors[status] || 'bg-gray-100 text-gray-800';
-  };
-
-  // Filter loans based on view mode
-  const filteredLoans = allLoans.filter(loan => {
-    if (viewMode === 'pending') return loan.status === 'pending';
-    if (viewMode === 'approved') return loan.status === 'approved';
-    if (viewMode === 'active') return loan.status === 'active';
-    if (viewMode === 'draft') return loan.status === 'draft';
-    return true;
-  });
-
-  // Count loans by status
-  const counts = {
-    all: allLoans.length,
-    draft: allLoans.filter(l => l.status === 'draft').length,
-    pending: allLoans.filter(l => l.status === 'pending').length,
-    approved: allLoans.filter(l => l.status === 'approved').length,
-    active: allLoans.filter(l => l.status === 'active').length,
-  };
-
   if (loansLoading) return <Loading />;
 
-  if (authError) {
-    return (
-      <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-center">
-        <p className="text-red-600">{authError}</p>
-        <button 
-          onClick={() => window.location.href = '/login'}
-          className="mt-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
-        >
-          Go to Login
-        </button>
-      </div>
-    );
+  if (error) {
+    console.error('Error fetching loans:', error);
   }
 
   return (
