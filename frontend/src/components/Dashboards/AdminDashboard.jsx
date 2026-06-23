@@ -269,7 +269,35 @@ const AdminDashboard = ({ user }) => {
           </div>
         </div>
       </div>
+// In AdminDashboard.jsx, add this section after the stats
 
+{/* Loan Products Quick Access */}
+<div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+  <div className="flex justify-between items-center mb-4">
+    <h3 className="text-lg font-semibold text-gray-900">Loan Products</h3>
+    <Link to="/admin/loan-products" className="text-sm text-primary-600 hover:text-primary-700 font-medium">
+      Manage Products →
+    </Link>
+  </div>
+  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+    <Link to="/admin/loan-products/add" className="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+      <span className="text-2xl mr-2">➕</span>
+      <span className="text-sm font-medium">Add Product</span>
+    </Link>
+    <Link to="/admin/loan-products" className="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+      <span className="text-2xl mr-2">📋</span>
+      <span className="text-sm font-medium">View Products</span>
+    </Link>
+    <Link to="/admin/customers" className="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+      <span className="text-2xl mr-2">👥</span>
+      <span className="text-sm font-medium">Manage Customers</span>
+    </Link>
+    <Link to="/admin/loans" className="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+      <span className="text-2xl mr-2">💰</span>
+      <span className="text-sm font-medium">Manage Loans</span>
+    </Link>
+  </div>
+</div>
       {/* Stats Grid */}
       <div style={{
         display: 'grid',

@@ -17,9 +17,13 @@ const Dashboard = () => {
     );
   }
 
+  // Check if user is admin or superuser
+  if (user?.is_superuser || user?.role === 'admin') {
+    return <AdminDashboard user={user} />;
+  }
+
+  // Render dashboard based on role
   switch (user?.role) {
-    case 'admin':
-      return <AdminDashboard user={user} />;
     case 'manager':
       return <ManagerDashboard user={user} />;
     case 'officer':

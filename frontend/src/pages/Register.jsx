@@ -121,7 +121,7 @@ const Register = () => {
           }
           
           toast.success('Welcome to MicroFinance System!');
-          navigate('/app');
+          navigate('/');
         } else {
           console.log('No tokens in response, trying login...');
           const loginResult = await login({
@@ -131,7 +131,7 @@ const Register = () => {
           
           if (loginResult.success) {
             toast.success('Welcome to MicroFinance System!');
-            navigate('/app');
+            navigate('/');
           } else {
             toast.error('Auto-login failed. Please login manually.');
             navigate('/login');

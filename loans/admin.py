@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import LoanProduct, Loan, LoanSchedule
+from .models import Loan, LoanProduct, LoanSchedule
 
 @admin.register(LoanProduct)
 class LoanProductAdmin(admin.ModelAdmin):
@@ -7,21 +7,31 @@ class LoanProductAdmin(admin.ModelAdmin):
     list_filter = ['is_active', 'interest_method', 'repayment_frequency']
     search_fields = ['product_name', 'product_code']
     ordering = ['product_name']
-
-
-class LoanScheduleInline(admin.TabularInline):
-    model = LoanSchedule
-    extra = 0
-    readonly_fields = ['installment_no', 'due_date', 'total_due', 'status']
-
+    
+    fieldsets = (
+        ('Product Information', {
+            'fields': ('product_name', 'product_code', 'description')
+        }),
+        ('Amount & Interest', {
+            'fields': ('min_amount', 'max_amount', 'interest_rate', 'interest_method')
+        }),
+        ('Term & Repayment', {
+            'fields': ('min_term_months', 'max_term_months', 'repayment_frequency')
+        }),
+        ('Fees', {
+            'fields': ('processing_fee', 'late_penalty_rate')
+        }),
+        ('Status', {
+            'fields': ('requires_guarantor', 'requires_collateral', 'is_active')
+        }),
+    )
 
 @admin.register(Loan)
 class LoanAdmin(admin.ModelAdmin):
-    list_display = ['loan_no', 'customer', 'product', 'principal', 'status', 'outstanding_balance']
+    list_display = ['loan_no', 'customer', 'product', 'principal', 'status', 'outstanding_balance', 'created_at']
     list_filter = ['status', 'product', 'branch', 'disbursement_date']
-    search_fields = ['loan_no', 'customer__first_name', 'customer__last_name', 'customer__customer_no']
+    search_fields = ['loan_no', 'customer__first_name', 'customer__last_name']
     readonly_fields = ['loan_no', 'total_interest', 'total_payable', 'amount_paid', 'outstanding_balance']
-    inlines = [LoanScheduleInline]
     
     fieldsets = (
         ('Loan Information', {
@@ -43,3 +53,9 @@ class LoanAdmin(admin.ModelAdmin):
             'fields': ('status', 'is_overdue', 'days_overdue', 'notes')
         }),
     )
+
+@admin.register(LoanSchedule)
+class LoanScheduleAdmin(admin.ModelAdmin):
+    list_display = ['loan', 'installment_no', 'due_date', 'total_due', 'status']
+    list_filter = ['status', 'due_date']
+    search_fields = ['loan__loan_no']
