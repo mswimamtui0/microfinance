@@ -1,8 +1,22 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import ceoImage from '../assets/ceo.jpg';
+import { useTranslation } from 'react-i18next';
 
 const PublicHomepage = () => {
+  const { t, i18n } = useTranslation();  // Add i18n for language switching
+
+  // Language toggle function
+  const toggleLanguage = () => {
+    const newLang = i18n.language === 'sw' ? 'en' : 'sw';
+    i18n.changeLanguage(newLang);
+    localStorage.setItem('language', newLang);
+  };
+
+  // Get current language button text
+  const getLanguageLabel = () => {
+    return i18n.language === 'sw' ? 'English' : 'Kiswahili';
+  };
   return (
     <div className="public-homepage">
       {/* Navigation Bar */}
@@ -19,6 +33,9 @@ const PublicHomepage = () => {
             <Link to="/login" style={styles.loginBtn}>Sign In</Link>
             <Link to="/register" style={styles.getStartedBtn}>Get Started</Link>
             <Link to="/app" style={styles.dashboardBtn}>Dashboard</Link>
+            <button onClick={toggleLanguage} style={styles.languageBtn}>
+              {getLanguageLabel()}
+            </button>
           </div>
         </div>
       </nav>
