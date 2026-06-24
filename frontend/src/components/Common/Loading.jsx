@@ -1,15 +1,8 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 
-// Inside the component:
-const { t } = useTranslation();
-
-// Replace static text with t():
-// "Welcome" → {t('Welcome')}
-// "Dashboard" → {t('Dashboard')}
-// "Total Portfolio" → {t('Total Portfolio')}
-
 const Loading = () => {
+  const { t } = useTranslation();
   return (
     <div className="flex items-center justify-center min-h-[400px]">
       <div className="flex flex-col items-center space-y-4">

@@ -4,17 +4,10 @@ import { customerAPI } from '../../api';
 import toast from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
 
-// Inside the component:
-const { t } = useTranslation();
-
-// Replace static text with t():
-// "Welcome" → {t('Welcome')}
-// "Dashboard" → {t('Dashboard')}
-// "Total Portfolio" → {t('Total Portfolio')}
-
 const CustomerForm = ({ onClose, customer }) => {
   const isEditing = !!customer;
-  
+  const { t } = useTranslation();
+
   const [formData, setFormData] = useState({
     first_name: customer?.first_name || '',
     middle_name: customer?.middle_name || '',
