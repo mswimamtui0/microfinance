@@ -148,7 +148,7 @@ const ViewerDashboard = ({ user }) => {
             <h1 className="text-2xl font-bold">
               {t('Welcome')}, {user?.first_name || user?.username}!
             </h1>
-            <p style={{ opacity: 0.9, marginTop: '4px' }}>{t('Viewer')} • {t('Read-Only Access')}</p>
+            <p style={{ opacity: 0.9, marginTop: '4px' }}>{t('Viewer')} • {user?.branch_name || t('All Branches')}</p>
             <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
               <span style={{ padding: '4px 12px', background: 'rgba(255,255,255,0.2)', borderRadius: '20px', fontSize: '12px' }}>{t('Viewer')}</span>
               <span style={{ padding: '4px 12px', background: 'rgba(255,255,255,0.2)', borderRadius: '20px', fontSize: '12px' }}>{t('Read-Only')}</span>
@@ -198,41 +198,47 @@ const ViewerDashboard = ({ user }) => {
             <Doughnut data={doughnutData} options={doughnutOptions} />
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', marginTop: '12px', textAlign: 'center' }}>
-            <div>
-              <p style={{ fontWeight: '600', color: '#22c55e' }}>{portfolio?.data?.performing || 75}%</p>
-              <p style={{ fontSize: '12px', color: '#6b7280' }}>{t('Performing')}</p>
-            </div>
-            <div>
-              <p style={{ fontWeight: '600', color: '#f59e0b' }}>{portfolio?.data?.overdue_rate || 15}%</p>
-              <p style={{ fontSize: '12px', color: '#6b7280' }}>{t('Overdue')}</p>
-            </div>
-            <div>
-              <p style={{ fontWeight: '600', color: '#ef4444' }}>{portfolio?.data?.default_rate || 10}%</p>
-              <p style={{ fontSize: '12px', color: '#6b7280' }}>{t('Defaulted')}</p>
-            </div>
+            <div><p style={{ fontWeight: '600', color: '#22c55e' }}>{portfolio?.data?.performing || 75}%</p><p style={{ fontSize: '12px', color: '#6b7280' }}>{t('Performing')}</p></div>
+            <div><p style={{ fontWeight: '600', color: '#f59e0b' }}>{portfolio?.data?.overdue_rate || 15}%</p><p style={{ fontSize: '12px', color: '#6b7280' }}>{t('Overdue')}</p></div>
+            <div><p style={{ fontWeight: '600', color: '#ef4444' }}>{portfolio?.data?.default_rate || 10}%</p><p style={{ fontSize: '12px', color: '#6b7280' }}>{t('Defaulted')}</p></div>
           </div>
         </div>
       </div>
 
       <div style={{ background: 'white', borderRadius: '12px', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', border: '1px solid #e5e7eb' }}>
-        <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px' }}>{t('System Overview')}</h3>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
-          <div style={{ padding: '12px', background: '#f9fafb', borderRadius: '8px', textAlign: 'center' }}>
-            <p style={{ fontSize: '24px', fontWeight: 'bold', color: '#1f2937' }}>{portfolio?.data?.total_customers || 0}</p>
-            <p style={{ fontSize: '12px', color: '#6b7280' }}>{t('Total Clients')}</p>
-          </div>
-          <div style={{ padding: '12px', background: '#f9fafb', borderRadius: '8px', textAlign: 'center' }}>
-            <p style={{ fontSize: '24px', fontWeight: 'bold', color: '#1f2937' }}>{portfolio?.data?.active_loans || 0}</p>
-            <p style={{ fontSize: '12px', color: '#6b7280' }}>{t('Active Loans')}</p>
-          </div>
-          <div style={{ padding: '12px', background: '#f9fafb', borderRadius: '8px', textAlign: 'center' }}>
-            <p style={{ fontSize: '24px', fontWeight: 'bold', color: '#1f2937' }}>{formatCurrency(portfolio?.data?.total_portfolio || 0)}</p>
-            <p style={{ fontSize: '12px', color: '#6b7280' }}>{t('Total Portfolio')}</p>
-          </div>
-          <div style={{ padding: '12px', background: '#f9fafb', borderRadius: '8px', textAlign: 'center' }}>
-            <p style={{ fontSize: '24px', fontWeight: 'bold', color: '#1f2937' }}>{portfolio?.data?.collection_rate || 0}%</p>
-            <p style={{ fontSize: '12px', color: '#6b7280' }}>{t('Collection Rate')}</p>
-          </div>
+        <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px' }}>{t('Recent Loans')}</h3>
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('Loan No')}</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('Customer')}</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('Amount')}</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('Status')}</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {loans?.data?.results?.slice(0, 5).map((loan) => (
+                <tr key={loan.id} className="hover:bg-gray-50">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{loan.loan_no}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {loan.customer_details?.first_name} {loan.customer_details?.last_name}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{formatCurrency(loan.principal)}</td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`px-2 py-1 text-xs font-medium rounded-full
+                      ${loan.status === 'active' ? 'bg-green-100 text-green-800' : ''}
+                      ${loan.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : ''}
+                      ${loan.status === 'defaulted' ? 'bg-red-100 text-red-800' : ''}
+                      ${loan.status === 'paid' ? 'bg-blue-100 text-blue-800' : ''}
+                    `}>
+                      {t(loan.status)}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
