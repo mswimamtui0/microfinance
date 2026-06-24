@@ -4,7 +4,7 @@ import { paymentAPI } from '../../api';
 import { useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 
-const PaymentForm = ({ onClose, loans, selectedLoan: propSelectedLoan }) => {
+const PaymentForm = ({ onClose, loans = [], selectedLoan: propSelectedLoan }) => {
   const [searchParams] = useSearchParams();
   const loanIdFromUrl = searchParams.get('loan');
   
@@ -22,7 +22,7 @@ const PaymentForm = ({ onClose, loans, selectedLoan: propSelectedLoan }) => {
 
   // Find loan when ID changes
   useEffect(() => {
-    if (formData.loan && loans?.length > 0) {
+    if (formData.loan && loans && loans.length > 0) {
       const loan = loans.find(l => l.id === parseInt(formData.loan));
       if (loan) {
         setSelectedLoanDetails(loan);
@@ -32,7 +32,7 @@ const PaymentForm = ({ onClose, loans, selectedLoan: propSelectedLoan }) => {
 
   // Handle loan from URL parameter
   useEffect(() => {
-    if (loanIdFromUrl && loans?.length > 0) {
+    if (loanIdFromUrl && loans && loans.length > 0) {
       const loan = loans.find(l => l.id === parseInt(loanIdFromUrl));
       if (loan) {
         setSelectedLoanDetails(loan);
@@ -42,7 +42,10 @@ const PaymentForm = ({ onClose, loans, selectedLoan: propSelectedLoan }) => {
   }, [loanIdFromUrl, loans]);
 
   const mutation = useMutation({
-    mutationFn: (data) => paymentAPI.create(data),
+    mutationFn: (data) => {
+      console.log('Sending payment data:', data);
+      return paymentAPI.create(data);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries(['payments']);
       queryClient.invalidateQueries(['loans']);
@@ -50,12 +53,18 @@ const PaymentForm = ({ onClose, loans, selectedLoan: propSelectedLoan }) => {
       onClose();
     },
     onError: (error) => {
+      console.error('Payment error:', error);
       toast.error(error.response?.data?.error || 'Failed to record payment');
     },
   });
 
   const handleLoanChange = (e) => {
     const loanId = e.target.value;
+    if (!loanId) {
+      setSelectedLoanDetails(null);
+      setFormData({ ...formData, loan: '' });
+      return;
+    }
     const loan = loans?.find(l => l.id === parseInt(loanId));
     setSelectedLoanDetails(loan || null);
     setFormData({ ...formData, loan: loanId });
@@ -71,6 +80,12 @@ const PaymentForm = ({ onClose, loans, selectedLoan: propSelectedLoan }) => {
     const amount = parseFloat(formData.amount_paid);
     if (isNaN(amount) || amount <= 0) {
       toast.error('Please enter a valid amount');
+      return;
+    }
+    
+    // Check if amount exceeds outstanding balance
+    if (selectedLoanDetails && amount > (selectedLoanDetails.outstanding_balance || 0)) {
+      toast.error(`Amount exceeds outstanding balance of ${formatCurrency(selectedLoanDetails.outstanding_balance)}`);
       return;
     }
     
@@ -129,12 +144,16 @@ const PaymentForm = ({ onClose, loans, selectedLoan: propSelectedLoan }) => {
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
               >
                 <option value="">Select Loan</option>
-                {loans?.map((loan) => (
-                  <option key={loan.id} value={loan.id}>
-                    {loan.loan_no} - {loan.customer?.first_name} {loan.customer?.last_name} - 
-                    Outstanding: {formatCurrency(loan.outstanding_balance)}
-                  </option>
-                ))}
+                {loans && loans.length > 0 ? (
+                  loans.map((loan) => (
+                    <option key={loan.id} value={loan.id}>
+                      {loan.loan_no || 'N/A'} - {loan.customer?.first_name || 'Unknown'} {loan.customer?.last_name || ''} - 
+                      Outstanding: {formatCurrency(loan.outstanding_balance)}
+                    </option>
+                  ))
+                ) : (
+                  <option value="" disabled>No active loans available</option>
+                )}
               </select>
             </div>
 
@@ -157,7 +176,7 @@ const PaymentForm = ({ onClose, loans, selectedLoan: propSelectedLoan }) => {
                   </div>
                   <div>
                     <span className="text-gray-500">Loan No:</span>
-                    <span className="ml-2 font-medium">{selectedLoanDetails.loan_no}</span>
+                    <span className="ml-2 font-medium">{selectedLoanDetails.loan_no || 'N/A'}</span>
                   </div>
                 </div>
               </div>
