@@ -200,11 +200,22 @@ const PaymentForm = ({ onClose, loans = [], selectedLoan: propSelectedLoan }) =>
                     <span className="ml-2 font-medium text-gray-900">{selectedLoanDetails.loan_no || 'N/A'}</span>
                   </div>
                   <div>
-                    <span className="text-gray-500">Customer:</span>
-                    <span className="ml-2 font-medium text-gray-900">
-                      {selectedLoanDetails.customer?.first_name || 'Unknown'} {selectedLoanDetails.customer?.last_name || ''}
-                    </span>
-                  </div>
+  <span className="text-gray-500">Customer:</span>
+  <span className="ml-2 font-medium text-gray-900">
+    {(() => {
+      // Try multiple ways to get customer name
+      const customer = selectedLoanDetails.customer || selectedLoanDetails.customer_details;
+      if (customer) {
+        return `${customer.first_name || ''} ${customer.last_name || ''}`.trim() || 'Unknown';
+      }
+      // Check if customer name is directly in loan object
+      if (selectedLoanDetails.customer_name) {
+        return selectedLoanDetails.customer_name;
+      }
+      return 'Unknown';
+    })()}
+  </span>
+</div>
                   <div>
                     <span className="text-gray-500">Product:</span>
                     <span className="ml-2 font-medium text-gray-900">{selectedLoanDetails.product_details?.product_name || 'N/A'}</span>
