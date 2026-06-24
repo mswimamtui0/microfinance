@@ -7,7 +7,6 @@ import { useTranslation } from 'react-i18next';
 
 const Dashboard = () => {
   const { user } = useAuth();
-  const { t } = useTranslation();
 
   // Fetch loans directly
   const { data: loansData, isLoading } = useQuery({

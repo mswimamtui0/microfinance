@@ -1,121 +1,332 @@
-import React, { useState, useEffect } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { paymentAPI, loanAPI } from '../api';
-import PaymentForm from '../components/Payments/PaymentForm';
+import React, { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { loanAPI } from '../api';
 import Loading from '../components/Common/Loading';
 import { formatCurrency, formatDate } from '../utils/formatters';
+import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import toast from 'react-hot-toast';
 
-const Payments = () => {
+const Collections = () => {
   const { t } = useTranslation();
-  const [showForm, setShowForm] = useState(false);
-  const [selectedLoan, setSelectedLoan] = useState(null);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterStatus, setFilterStatus] = useState('');
-
-  const queryClient = useQueryClient();
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const loanId = params.get('loan');
-    if (loanId) {
-      setSelectedLoan({ id: parseInt(loanId) });
-      setShowForm(true);
-    }
-  }, []);
-
-  const { data: payments, isLoading } = useQuery({
-    queryKey: ['payments', searchTerm, filterStatus],
-    queryFn: () => paymentAPI.getAll({ search: searchTerm, status: filterStatus }),
-  });
-
-  const { data: loans } = useQuery({
-    queryKey: ['loans-for-payment'],
-    queryFn: () => loanAPI.getAll({ status: 'active' }),
-  });
-
-  const deleteMutation = useMutation({
-    mutationFn: (id) => paymentAPI.delete(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries(['payments']);
-      toast.success(t('Malipo yamefutwa kikamilifu'));
-    },
-    onError: (error) => {
-      toast.error(error.response?.data?.error || t('Imeshindwa kufuta malipo'));
-    },
+  const [filter, setFilter] = useState('all');
+  
+  const { data: loans, isLoading } = useQuery({
+    queryKey: ['loans'],
+    queryFn: () => loanAPI.getAll({ limit: 1000 }),
   });
 
   if (isLoading) return <Loading />;
 
+  const today = new Date();
+  const todayStr = today.toISOString().split('T')[0];
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const tomorrowStr = tomorrow.toISOString().split('T')[0];
+
+  const allLoans = loans?.data?.results || [];
+  
+  // Get all schedules from loans
+  const allSchedules = [];
+  allLoans.forEach(loan => {
+    if (loan.schedules) {
+      loan.schedules.forEach(schedule => {
+        if (schedule.status === 'pending' || schedule.status === 'overdue' || schedule.status === 'partial') {
+          allSchedules.push({
+            ...schedule,
+            loan: loan,
+            customer: loan.customer_details
+          });
+        }
+      });
+    }
+  });
+
+  const filteredSchedules = allSchedules.filter(item => {
+    if (filter === 'today') {
+      return item.due_date === todayStr;
+    } else if (filter === 'tomorrow') {
+      return item.due_date === tomorrowStr;
+    } else if (filter === 'overdue') {
+      return item.status === 'overdue';
+    } else if (filter === 'defaulted') {
+      return item.loan?.status === 'defaulted';
+    }
+    return true;
+  });
+
+  const stats = [
+    { 
+      name: t('Due Today'), 
+      count: allSchedules.filter(c => c.due_date === todayStr).length,
+      total: allSchedules.filter(c => c.due_date === todayStr).reduce((sum, c) => sum + c.total_due, 0),
+      color: '#f59e0b',
+      icon: '📅'
+    },
+    { 
+      name: t('Due Tomorrow'), 
+      count: allSchedules.filter(c => c.due_date === tomorrowStr).length,
+      total: allSchedules.filter(c => c.due_date === tomorrowStr).reduce((sum, c) => sum + c.total_due, 0),
+      color: '#3b82f6',
+      icon: '📆'
+    },
+    { 
+      name: t('Overdue'), 
+      count: allSchedules.filter(c => c.status === 'overdue').length,
+      total: allSchedules.filter(c => c.status === 'overdue').reduce((sum, c) => sum + c.total_due, 0),
+      color: '#ef4444',
+      icon: '⚠️'
+    },
+    { 
+      name: t('Defaulters'), 
+      count: allLoans.filter(l => l.status === 'defaulted').length,
+      total: allLoans.filter(l => l.status === 'defaulted').reduce((sum, l) => sum + l.outstanding_balance, 0),
+      color: '#dc2626',
+      icon: '🚫'
+    },
+  ];
+
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-semibold text-gray-900">{t('Usimamizi wa Malipo')}</h1>
-        <button onClick={() => { setSelectedLoan(null); setShowForm(true); }} className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors">
-          {t('Malipo Mpya')}
+        <h1 className="text-2xl font-semibold text-gray-900">{t('Collections Dashboard')}</h1>
+        <div className="flex gap-2">
+          <button className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors">
+            {t('Export Report')}
+          </button>
+        </div>
+      </div>
+
+      {/* Stats */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(4, 1fr)',
+        gap: '16px'
+      }}>
+        {stats.map((stat) => (
+          <div key={stat.name} style={{
+            background: 'white',
+            borderRadius: '12px',
+            padding: '16px',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+            border: '1px solid #e5e7eb'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <p style={{ fontSize: '14px', fontWeight: '500', color: '#6b7280' }}>{stat.name}</p>
+                <p style={{ fontSize: '28px', fontWeight: 'bold', color: '#1f2937' }}>{stat.count}</p>
+                <p style={{ fontSize: '12px', color: '#6b7280' }}>{formatCurrency(stat.total)}</p>
+              </div>
+              <span style={{ fontSize: '32px' }}>{stat.icon}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Real-Time Collection Summary */}
+      <div style={{
+        background: 'white',
+        borderRadius: '12px',
+        padding: '16px',
+        border: '1px solid #e5e7eb'
+      }}>
+        <h3 className="text-lg font-semibold text-gray-900 mb-3">{t('Real-Time Collection Status')}</h3>
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(4, 1fr)',
+          gap: '16px'
+        }}>
+          <div className="text-center p-3 bg-green-50 rounded-lg">
+            <p className="text-sm text-gray-500">{t("Today's Collections")}</p>
+            <p className="text-xl font-bold text-green-600">{formatCurrency(0)}</p>
+          </div>
+          <div className="text-center p-3 bg-yellow-50 rounded-lg">
+            <p className="text-sm text-gray-500">{t('Expected Today')}</p>
+            <p className="text-xl font-bold text-yellow-600">{formatCurrency(stats[0].total)}</p>
+          </div>
+          <div className="text-center p-3 bg-red-50 rounded-lg">
+            <p className="text-sm text-gray-500">{t('Overdue Amount')}</p>
+            <p className="text-xl font-bold text-red-600">{formatCurrency(stats[2].total)}</p>
+          </div>
+          <div className="text-center p-3 bg-blue-50 rounded-lg">
+            <p className="text-sm text-gray-500">{t('Collection Rate')}</p>
+            <p className="text-xl font-bold text-blue-600">0%</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Filter Tabs */}
+      <div style={{
+        display: 'flex',
+        gap: '12px',
+        background: 'white',
+        padding: '12px',
+        borderRadius: '12px',
+        border: '1px solid #e5e7eb',
+        flexWrap: 'wrap'
+      }}>
+        <button
+          onClick={() => setFilter('all')}
+          style={{
+            padding: '8px 20px',
+            borderRadius: '8px',
+            border: 'none',
+            background: filter === 'all' ? '#0284c7' : 'transparent',
+            color: filter === 'all' ? 'white' : '#4b5563',
+            cursor: 'pointer',
+            fontWeight: '500'
+          }}
+        >
+          {t('All Collections')}
+        </button>
+        <button
+          onClick={() => setFilter('today')}
+          style={{
+            padding: '8px 20px',
+            borderRadius: '8px',
+            border: 'none',
+            background: filter === 'today' ? '#f59e0b' : 'transparent',
+            color: filter === 'today' ? 'white' : '#4b5563',
+            cursor: 'pointer',
+            fontWeight: '500'
+          }}
+        >
+          {t('Due Today')}
+        </button>
+        <button
+          onClick={() => setFilter('tomorrow')}
+          style={{
+            padding: '8px 20px',
+            borderRadius: '8px',
+            border: 'none',
+            background: filter === 'tomorrow' ? '#3b82f6' : 'transparent',
+            color: filter === 'tomorrow' ? 'white' : '#4b5563',
+            cursor: 'pointer',
+            fontWeight: '500'
+          }}
+        >
+          {t('Due Tomorrow')}
+        </button>
+        <button
+          onClick={() => setFilter('overdue')}
+          style={{
+            padding: '8px 20px',
+            borderRadius: '8px',
+            border: 'none',
+            background: filter === 'overdue' ? '#ef4444' : 'transparent',
+            color: filter === 'overdue' ? 'white' : '#4b5563',
+            cursor: 'pointer',
+            fontWeight: '500'
+          }}
+        >
+          {t('Overdue')}
+        </button>
+        <button
+          onClick={() => setFilter('defaulted')}
+          style={{
+            padding: '8px 20px',
+            borderRadius: '8px',
+            border: 'none',
+            background: filter === 'defaulted' ? '#dc2626' : 'transparent',
+            color: filter === 'defaulted' ? 'white' : '#4b5563',
+            cursor: 'pointer',
+            fontWeight: '500'
+          }}
+        >
+          {t('Defaulters')}
         </button>
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="flex-1">
-          <input type="text" placeholder={t('Tafuta malipo kwa kumbukumbu au mteja...')} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="block w-full px-3 py-2 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500 sm:text-sm" />
-        </div>
-        <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500">
-          <option value="">{t('Hali Zote')}</option>
-          <option value="completed">{t('Imekamilika')}</option>
-          <option value="pending">{t('Inasubiri')}</option>
-          <option value="failed">{t('Imeshindwa')}</option>
-          <option value="reversed">{t('Imerejeshwa')}</option>
-        </select>
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
-        <div style={{ background: 'white', borderRadius: '12px', padding: '16px', border: '1px solid #e5e7eb' }}>
-          <p style={{ fontSize: '14px', fontWeight: '500', color: '#6b7280' }}>{t('Jumla Iliyokusanywa')}</p>
-          <p style={{ fontSize: '24px', fontWeight: 'bold', color: '#1f2937' }}>{formatCurrency(payments?.data?.results?.reduce((sum, p) => sum + p.amount_paid, 0) || 0)}</p>
-        </div>
-        <div style={{ background: 'white', borderRadius: '12px', padding: '16px', border: '1px solid #e5e7eb' }}>
-          <p style={{ fontSize: '14px', fontWeight: '500', color: '#6b7280' }}>{t('Malipo ya Leo')}</p>
-          <p style={{ fontSize: '24px', fontWeight: 'bold', color: '#1f2937' }}>{payments?.data?.results?.filter(p => new Date(p.payment_date).toDateString() === new Date().toDateString()).length || 0}</p>
-        </div>
-        <div style={{ background: 'white', borderRadius: '12px', padding: '16px', border: '1px solid #e5e7eb' }}>
-          <p style={{ fontSize: '14px', fontWeight: '500', color: '#6b7280' }}>{t('Imekamilika')}</p>
-          <p style={{ fontSize: '24px', fontWeight: 'bold', color: '#22c55e' }}>{payments?.data?.results?.filter(p => p.status === 'completed').length || 0}</p>
-        </div>
-        <div style={{ background: 'white', borderRadius: '12px', padding: '16px', border: '1px solid #e5e7eb' }}>
-          <p style={{ fontSize: '14px', fontWeight: '500', color: '#6b7280' }}>{t('Inasubiri')}</p>
-          <p style={{ fontSize: '24px', fontWeight: 'bold', color: '#f59e0b' }}>{payments?.data?.results?.filter(p => p.status === 'pending').length || 0}</p>
-        </div>
-      </div>
-
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+      {/* Collections Table */}
+      <div style={{
+        background: 'white',
+        borderRadius: '12px',
+        border: '1px solid #e5e7eb',
+        overflow: 'hidden'
+      }}>
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead style={{ background: '#f9fafb' }}>
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('Kumbukumbu')}</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('Mkopo')}</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('Mteja')}</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('Kiasi')}</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('Njia')}</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('Hali')}</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('Tarehe')}</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('Vitendo')}</th>
+                <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '500', color: '#6b7280' }}>{t('Customer')}</th>
+                <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '500', color: '#6b7280' }}>{t('Loan')}</th>
+                <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '500', color: '#6b7280' }}>{t('Installment')}</th>
+                <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '500', color: '#6b7280' }}>{t('Due Date')}</th>
+                <th style={{ padding: '12px 16px', textAlign: 'right', fontSize: '12px', fontWeight: '500', color: '#6b7280' }}>{t('Amount')}</th>
+                <th style={{ padding: '12px 16px', textAlign: 'right', fontSize: '12px', fontWeight: '500', color: '#6b7280' }}>{t('Penalty')}</th>
+                <th style={{ padding: '12px 16px', textAlign: 'right', fontSize: '12px', fontWeight: '500', color: '#6b7280' }}>{t('Total')}</th>
+                <th style={{ padding: '12px 16px', textAlign: 'center', fontSize: '12px', fontWeight: '500', color: '#6b7280' }}>{t('Status')}</th>
+                <th style={{ padding: '12px 16px', textAlign: 'center', fontSize: '12px', fontWeight: '500', color: '#6b7280' }}>{t('Action')}</th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {payments?.data?.results?.map((payment) => (
-                <tr key={payment.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{payment.transaction_ref}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{payment.loan?.loan_no}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{payment.loan?.customer?.first_name} {payment.loan?.customer?.last_name}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{formatCurrency(payment.amount_paid)}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 capitalize">{t(payment.payment_method)}</td>
-                  <td className="px-6 py-4 whitespace-nowrap"><span className={`px-2 py-1 text-xs font-medium rounded-full ${payment.status === 'completed' ? 'bg-green-100 text-green-800' : payment.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'}`}>{t(payment.status)}</span></td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatDate(payment.payment_date)}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">
-                    <button onClick={() => { if (window.confirm(t('Una uhakika unataka kufuta malipo haya?'))) { deleteMutation.mutate(payment.id); } }} className="text-red-600 hover:text-red-900">{t('Futa')}</button>
+            <tbody>
+              {filteredSchedules.map((item) => (
+                <tr key={item.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
+                  <td style={{ padding: '12px 16px' }}>
+                    <span style={{ fontWeight: '500' }}>
+                      {item.customer?.first_name} {item.customer?.last_name}
+                    </span>
+                    <div style={{ fontSize: '12px', color: '#6b7280' }}>{item.customer?.phone}</div>
+                  </td>
+                  <td style={{ padding: '12px 16px', fontSize: '14px', color: '#6b7280' }}>
+                    {item.loan?.loan_no}
+                  </td>
+                  <td style={{ padding: '12px 16px', fontSize: '14px', color: '#6b7280' }}>
+                    #{item.installment_no} of {item.loan?.term_months || 0}
+                  </td>
+                  <td style={{ padding: '12px 16px', fontSize: '14px' }}>
+                    {formatDate(item.due_date)}
+                    {item.due_date === todayStr && (
+                      <span style={{
+                        marginLeft: '8px',
+                        padding: '2px 8px',
+                        background: '#fef3c7',
+                        borderRadius: '12px',
+                        fontSize: '10px',
+                        color: '#d97706'
+                      }}>
+                        {t('Today')}
+                      </span>
+                    )}
+                  </td>
+                  <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: '600' }}>
+                    {formatCurrency(item.total_due)}
+                  </td>
+                  <td style={{ padding: '12px 16px', textAlign: 'right', color: '#ef4444' }}>
+                    {formatCurrency(item.penalty_amount || 0)}
+                  </td>
+                  <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 'bold' }}>
+                    {formatCurrency((item.total_due || 0) + (item.penalty_amount || 0))}
+                  </td>
+                  <td style={{ padding: '12px 16px', textAlign: 'center' }}>
+                    <span style={{
+                      padding: '4px 12px',
+                      borderRadius: '20px',
+                      fontSize: '12px',
+                      fontWeight: '500',
+                      background: item.status === 'overdue' ? '#fef2f2' : 
+                                 item.status === 'partial' ? '#eff6ff' : '#fef3c7',
+                      color: item.status === 'overdue' ? '#dc2626' : 
+                             item.status === 'partial' ? '#2563eb' : '#d97706'
+                    }}>
+                      {t(item.status)}
+                    </span>
+                  </td>
+                  <td style={{ padding: '12px 16px', textAlign: 'center' }}>
+                    <Link
+                      to={`/payments/new?loan=${item.loan?.id}`}
+                      style={{
+                        padding: '6px 16px',
+                        background: '#0284c7',
+                        color: 'white',
+                        borderRadius: '6px',
+                        textDecoration: 'none',
+                        fontSize: '14px',
+                        display: 'inline-block'
+                      }}
+                    >
+                      {t('Receive')}
+                    </Link>
                   </td>
                 </tr>
               ))}
@@ -123,10 +334,8 @@ const Payments = () => {
           </table>
         </div>
       </div>
-
-      {showForm && <PaymentForm onClose={() => { setShowForm(false); setSelectedLoan(null); }} loans={loans?.data?.results || []} selectedLoan={selectedLoan} />}
     </div>
   );
 };
 
-export default Payments;
+export default Collections;

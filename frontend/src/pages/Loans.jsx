@@ -37,10 +37,10 @@ const Loans = () => {
     mutationFn: (id) => loanAPI.approve(id),
     onSuccess: () => {
       queryClient.invalidateQueries(['loans']);
-      toast.success(t('Mkopo umekubaliwa kikamilifu'));
+      toast.success(t('Loan approved successfully'));
     },
     onError: (error) => {
-      toast.error(error.response?.data?.error || t('Imeshindwa kukubali mkopo'));
+      toast.error(error.response?.data?.error || t('Failed to approve loan'));
     },
   });
 
@@ -48,10 +48,10 @@ const Loans = () => {
     mutationFn: (id) => loanAPI.disburse(id),
     onSuccess: () => {
       queryClient.invalidateQueries(['loans']);
-      toast.success(t('Mkopo umetolewa kikamilifu'));
+      toast.success(t('Loan disbursed successfully'));
     },
     onError: (error) => {
-      toast.error(error.response?.data?.error || t('Imeshindwa kutoa mkopo'));
+      toast.error(error.response?.data?.error || t('Failed to disburse loan'));
     },
   });
 
@@ -79,6 +79,7 @@ const Loans = () => {
     return true;
   });
 
+  // Count loans by status
   const allLoans = loans?.data?.results || [];
   const draftCount = allLoans.filter(l => l.status === 'draft').length;
   const pendingCount = allLoans.filter(l => l.status === 'pending').length;
@@ -87,86 +88,224 @@ const Loans = () => {
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-semibold text-gray-900">{t('Usimamizi wa Mikopo')}</h1>
-        <button onClick={() => setShowApplication(true)} className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors">
-          {t('Mkopo Mpya')}
+        <h1 className="text-2xl font-semibold text-gray-900">{t('Loan Management')}</h1>
+        <button
+          onClick={() => setShowApplication(true)}
+          className="flex items-center px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+        >
+          {t('New Loan')}
         </button>
       </div>
 
+      {/* Status Summary */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-          <p className="text-sm text-gray-500">{t('Mikopo Yote')}</p>
+          <p className="text-sm text-gray-500">{t('All Loans')}</p>
           <p className="text-2xl font-bold text-gray-900">{allLoans.length}</p>
         </div>
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-          <p className="text-sm text-gray-500">{t('Rasimu')}</p>
+          <p className="text-sm text-gray-500">{t('Draft')}</p>
           <p className="text-2xl font-bold text-gray-900">{draftCount}</p>
         </div>
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-          <p className="text-sm text-gray-500">{t('Inasubiri')}</p>
+          <p className="text-sm text-gray-500">{t('Pending')}</p>
           <p className="text-2xl font-bold text-gray-900">{pendingCount}</p>
         </div>
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-          <p className="text-sm text-gray-500">{t('Inaendelea')}</p>
+          <p className="text-sm text-gray-500">{t('Active')}</p>
           <p className="text-2xl font-bold text-gray-900">{activeCount}</p>
         </div>
       </div>
 
-      <div style={{ display: 'flex', gap: '12px', background: 'white', padding: '12px', borderRadius: '12px', border: '1px solid #e5e7eb', flexWrap: 'wrap' }}>
-        <button onClick={() => setViewMode('all')} style={{ padding: '8px 20px', borderRadius: '8px', border: 'none', background: viewMode === 'all' ? '#0284c7' : 'transparent', color: viewMode === 'all' ? 'white' : '#4b5563', cursor: 'pointer', fontWeight: '500' }}>{t('Mikopo Yote')}</button>
-        <button onClick={() => setViewMode('draft')} style={{ padding: '8px 20px', borderRadius: '8px', border: 'none', background: viewMode === 'draft' ? '#6b7280' : 'transparent', color: viewMode === 'draft' ? 'white' : '#4b5563', cursor: 'pointer', fontWeight: '500' }}>{t('Rasimu')}</button>
-        <button onClick={() => setViewMode('pending')} style={{ padding: '8px 20px', borderRadius: '8px', border: 'none', background: viewMode === 'pending' ? '#f59e0b' : 'transparent', color: viewMode === 'pending' ? 'white' : '#4b5563', cursor: 'pointer', fontWeight: '500' }}>{t('Inasubiri')}</button>
-        <button onClick={() => setViewMode('approved')} style={{ padding: '8px 20px', borderRadius: '8px', border: 'none', background: viewMode === 'approved' ? '#3b82f6' : 'transparent', color: viewMode === 'approved' ? 'white' : '#4b5563', cursor: 'pointer', fontWeight: '500' }}>{t('Imekubaliwa')}</button>
-        <button onClick={() => setViewMode('active')} style={{ padding: '8px 20px', borderRadius: '8px', border: 'none', background: viewMode === 'active' ? '#22c55e' : 'transparent', color: viewMode === 'active' ? 'white' : '#4b5563', cursor: 'pointer', fontWeight: '500' }}>{t('Inaendelea')}</button>
+      {/* View Tabs */}
+      <div style={{
+        display: 'flex',
+        gap: '12px',
+        background: 'white',
+        padding: '12px',
+        borderRadius: '12px',
+        border: '1px solid #e5e7eb',
+        flexWrap: 'wrap'
+      }}>
+        <button
+          onClick={() => setViewMode('all')}
+          style={{
+            padding: '8px 20px',
+            borderRadius: '8px',
+            border: 'none',
+            background: viewMode === 'all' ? '#0284c7' : 'transparent',
+            color: viewMode === 'all' ? 'white' : '#4b5563',
+            cursor: 'pointer',
+            fontWeight: '500'
+          }}
+        >
+          {t('All Loans')}
+        </button>
+        <button
+          onClick={() => setViewMode('draft')}
+          style={{
+            padding: '8px 20px',
+            borderRadius: '8px',
+            border: 'none',
+            background: viewMode === 'draft' ? '#6b7280' : 'transparent',
+            color: viewMode === 'draft' ? 'white' : '#4b5563',
+            cursor: 'pointer',
+            fontWeight: '500'
+          }}
+        >
+          {t('Draft')}
+        </button>
+        <button
+          onClick={() => setViewMode('pending')}
+          style={{
+            padding: '8px 20px',
+            borderRadius: '8px',
+            border: 'none',
+            background: viewMode === 'pending' ? '#f59e0b' : 'transparent',
+            color: viewMode === 'pending' ? 'white' : '#4b5563',
+            cursor: 'pointer',
+            fontWeight: '500'
+          }}
+        >
+          {t('Pending')}
+        </button>
+        <button
+          onClick={() => setViewMode('approved')}
+          style={{
+            padding: '8px 20px',
+            borderRadius: '8px',
+            border: 'none',
+            background: viewMode === 'approved' ? '#3b82f6' : 'transparent',
+            color: viewMode === 'approved' ? 'white' : '#4b5563',
+            cursor: 'pointer',
+            fontWeight: '500'
+          }}
+        >
+          {t('Approved')}
+        </button>
+        <button
+          onClick={() => setViewMode('active')}
+          style={{
+            padding: '8px 20px',
+            borderRadius: '8px',
+            border: 'none',
+            background: viewMode === 'active' ? '#22c55e' : 'transparent',
+            color: viewMode === 'active' ? 'white' : '#4b5563',
+            cursor: 'pointer',
+            fontWeight: '500'
+          }}
+        >
+          {t('Active')}
+        </button>
       </div>
 
+      {/* Search and Filter */}
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="flex-1">
-          <input type="text" placeholder={t('Tafuta mikopo kwa nambari au mteja...')} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="block w-full px-3 py-2 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500 sm:text-sm" />
+          <input
+            type="text"
+            placeholder={t('Search loans by number or customer...')}
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="block w-full px-3 py-2 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+          />
         </div>
-        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500">
-          <option value="">{t('Hali Zote')}</option>
-          <option value="draft">{t('Rasimu')}</option>
-          <option value="pending">{t('Inasubiri')}</option>
-          <option value="approved">{t('Imekubaliwa')}</option>
-          <option value="disbursed">{t('Imetolewa')}</option>
-          <option value="active">{t('Inaendelea')}</option>
-          <option value="paid">{t('Imelipwa')}</option>
-          <option value="defaulted">{t('Imeshindwa')}</option>
-          <option value="rejected">{t('Imekataliwa')}</option>
+        <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+          className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
+        >
+          <option value="">{t('All Status')}</option>
+          <option value="draft">{t('Draft')}</option>
+          <option value="pending">{t('Pending')}</option>
+          <option value="approved">{t('Approved')}</option>
+          <option value="disbursed">{t('Disbursed')}</option>
+          <option value="active">{t('Active')}</option>
+          <option value="paid">{t('Paid')}</option>
+          <option value="defaulted">{t('Defaulted')}</option>
+          <option value="rejected">{t('Rejected')}</option>
         </select>
       </div>
 
+      {/* Loans Table */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('Nambari ya Mkopo')}</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('Mteja')}</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('Bidhaa')}</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('Kiasi')}</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('Hali')}</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('Salio')}</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('Vitendo')}</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('Loan No')}</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('Customer')}</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('Product')}</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('Principal')}</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('Status')}</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('Balance')}</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('Actions')}</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredLoans?.map((loan) => (
                 <tr key={loan.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{loan.loan_no}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{loan.customer_details?.first_name} {loan.customer_details?.last_name}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{loan.product_details?.product_name}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{formatCurrency(loan.principal)}</td>
-                  <td className="px-6 py-4 whitespace-nowrap"><span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(loan.status)}`}>{t(loan.status)}</span></td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{formatCurrency(loan.outstanding_balance)}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                    {loan.loan_no}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {loan.customer_details?.first_name} {loan.customer_details?.last_name}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {loan.product_details?.product_name}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {formatCurrency(loan.principal)}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(loan.status)}`}>
+                      {t(loan.status)}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {formatCurrency(loan.outstanding_balance)}
+                  </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
-                    <button onClick={() => setSelectedLoan(loan)} className="text-primary-600 hover:text-primary-900 font-medium mr-2">{t('Tazama')}</button>
-                    {loan.status === 'pending' && <button onClick={() => approveMutation.mutate(loan.id)} className="text-green-600 hover:text-green-900 font-medium mr-2">{t('Kubali')}</button>}
-                    {loan.status === 'approved' && <button onClick={() => disburseMutation.mutate(loan.id)} className="text-blue-600 hover:text-blue-900 font-medium mr-2">{t('Toa')}</button>}
-                    {loan.status === 'draft' && <button onClick={() => approveMutation.mutate(loan.id)} className="text-yellow-600 hover:text-yellow-900 font-medium">{t('Wasilisha kwa Idhini')}</button>}
-                    {loan.status === 'active' && <button onClick={() => window.location.href = `/payments/new?loan=${loan.id}`} className="text-purple-600 hover:text-purple-900 font-medium">{t('Pokea Malipo')}</button>}
+                    <button
+                      onClick={() => setSelectedLoan(loan)}
+                      className="text-primary-600 hover:text-primary-900 font-medium mr-2"
+                    >
+                      {t('View')}
+                    </button>
+                    {loan.status === 'pending' && (
+                      <button
+                        onClick={() => approveMutation.mutate(loan.id)}
+                        className="text-green-600 hover:text-green-900 font-medium mr-2"
+                      >
+                        {t('Approve')}
+                      </button>
+                    )}
+                    {loan.status === 'approved' && (
+                      <button
+                        onClick={() => disburseMutation.mutate(loan.id)}
+                        className="text-blue-600 hover:text-blue-900 font-medium mr-2"
+                      >
+                        {t('Disburse')}
+                      </button>
+                    )}
+                    {loan.status === 'draft' && (
+                      <button
+                        onClick={() => approveMutation.mutate(loan.id)}
+                        className="text-yellow-600 hover:text-yellow-900 font-medium"
+                      >
+                        {t('Submit for Approval')}
+                      </button>
+                    )}
+                    {loan.status === 'active' && (
+                      <button
+                        onClick={() => window.location.href = `/payments/new?loan=${loan.id}`}
+                        className="text-purple-600 hover:text-purple-900 font-medium"
+                      >
+                        {t('Receive Payment')}
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))}
@@ -175,8 +314,22 @@ const Loans = () => {
         </div>
       </div>
 
-      {showApplication && <LoanApplication onClose={() => setShowApplication(false)} products={products?.data?.results || []} customers={customers?.data?.results || []} />}
-      {selectedLoan && <LoanDetails loan={selectedLoan} onClose={() => setSelectedLoan(null)} />}
+      {/* Loan Application Modal */}
+      {showApplication && (
+        <LoanApplication
+          onClose={() => setShowApplication(false)}
+          products={products?.data?.results || []}
+          customers={customers?.data?.results || []}
+        />
+      )}
+
+      {/* Loan Details Modal */}
+      {selectedLoan && (
+        <LoanDetails
+          loan={selectedLoan}
+          onClose={() => setSelectedLoan(null)}
+        />
+      )}
     </div>
   );
 };
