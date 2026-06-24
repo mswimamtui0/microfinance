@@ -1,14 +1,21 @@
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
 from django.db import transaction
 from django.utils import timezone
 from .models import Payment
 from .serializers import PaymentSerializer
+from loans.models import Loan, LoanSchedule
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 class PaymentViewSet(viewsets.ModelViewSet):
     queryset = Payment.objects.all()
     serializer_class = PaymentSerializer
+    permission_classes = [IsAuthenticated]
     
     def get_queryset(self):
         queryset = super().get_queryset()
@@ -34,34 +41,113 @@ class PaymentViewSet(viewsets.ModelViewSet):
         return queryset
     
     @transaction.atomic
-    def perform_create(self, serializer):
-        payment = serializer.save(
-            received_by=self.request.user,
-            status='completed'
-        )
-        
-        # Update loan outstanding balance
-        loan = payment.loan
-        loan.amount_paid += payment.amount_paid
-        loan.outstanding_balance = loan.total_payable - loan.amount_paid
-        
-        # Update loan status if fully paid
-        if loan.outstanding_balance <= 0:
-            loan.status = 'paid'
-            loan.closed_date = timezone.now().date()
-        
-        loan.save()
-        
-        # Update schedule if linked
-        if payment.schedule:
-            schedule = payment.schedule
-            schedule.amount_paid = payment.amount_paid
-            if schedule.amount_paid >= schedule.total_due:
-                schedule.status = 'paid'
-                schedule.paid_date = timezone.now().date()
+    def create(self, request, *args, **kwargs):
+        """Create a new payment"""
+        try:
+            data = request.data
+            logger.info(f"Creating payment with data: {data}")
+            
+            # Validate required fields
+            required_fields = ['loan', 'amount_paid', 'payment_method', 'payment_date']
+            missing_fields = [f for f in required_fields if f not in data]
+            if missing_fields:
+                return Response({
+                    'error': f'Missing required fields: {", ".join(missing_fields)}'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Get loan
+            try:
+                loan = Loan.objects.get(id=data['loan'])
+                logger.info(f"Loan found: {loan.loan_no}")
+            except Loan.DoesNotExist:
+                return Response({
+                    'error': 'Loan does not exist'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Check if loan is active
+            if loan.status not in ['active', 'disbursed']:
+                return Response({
+                    'error': f'Loan is not active (status: {loan.status})'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Validate amount
+            try:
+                amount = float(data['amount_paid'])
+                if amount <= 0:
+                    return Response({
+                        'error': 'Amount must be greater than 0'
+                    }, status=status.HTTP_400_BAD_REQUEST)
+                if amount > float(loan.outstanding_balance):
+                    return Response({
+                        'error': f'Amount exceeds outstanding balance of {loan.outstanding_balance}'
+                    }, status=status.HTTP_400_BAD_REQUEST)
+            except ValueError:
+                return Response({
+                    'error': 'Invalid amount'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Get user (who received the payment)
+            user = request.user
+            if not user or not user.id:
+                return Response({
+                    'error': 'Authentication required'
+                }, status=status.HTTP_401_UNAUTHORIZED)
+            
+            # Create payment
+            payment = Payment(
+                loan=loan,
+                amount_paid=amount,
+                payment_method=data['payment_method'],
+                payment_date=data['payment_date'],
+                received_by=user,
+                status='completed',
+                notes=data.get('notes', ''),
+            )
+            payment.save()
+            logger.info(f"Payment created: {payment.id}")
+            
+            # Update loan outstanding balance
+            loan.amount_paid = float(loan.amount_paid) + amount
+            loan.outstanding_balance = float(loan.total_payable) - float(loan.amount_paid)
+            
+            # Check if loan is fully paid
+            if loan.outstanding_balance <= 0:
+                loan.status = 'paid'
+                loan.closed_date = timezone.now().date()
+                logger.info(f"Loan {loan.loan_no} fully paid!")
             else:
-                schedule.status = 'partial'
-            schedule.save()
+                loan.status = 'active'
+            
+            loan.save()
+            logger.info(f"Loan updated: {loan.loan_no}, outstanding: {loan.outstanding_balance}")
+            
+            # Try to update schedule if linked
+            schedule_id = data.get('schedule')
+            if schedule_id:
+                try:
+                    schedule = LoanSchedule.objects.get(id=schedule_id)
+                    schedule.amount_paid = float(schedule.amount_paid) + amount
+                    if schedule.amount_paid >= float(schedule.total_due):
+                        schedule.status = 'paid'
+                        schedule.paid_date = timezone.now().date()
+                    else:
+                        schedule.status = 'partial'
+                    schedule.save()
+                    payment.schedule = schedule
+                    payment.save()
+                except LoanSchedule.DoesNotExist:
+                    pass
+            
+            serializer = self.get_serializer(payment)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            
+        except Exception as e:
+            logger.error(f"Error creating payment: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            return Response({
+                'error': f'Failed to create payment: {str(e)}'
+            }, status=status.HTTP_400_BAD_REQUEST)
     
     @action(detail=False, methods=['get'])
     def summary(self, request):
