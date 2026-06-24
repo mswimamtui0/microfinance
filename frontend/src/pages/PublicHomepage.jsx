@@ -38,7 +38,14 @@ const PublicHomepage = () => {
             <a href="#about" style={styles.navLink}>{t('About') || 'About'}</a>
             <a href="#testimonials" style={styles.navLink}>{t('Testimonials') || 'Testimonials'}</a>
             
-            {/* Language Switcher Button */}
+            
+            
+            <Link to="/login" style={styles.loginBtn}>{t('Sign In') || 'Sign In'}</Link>
+            <Link to="/register" style={styles.getStartedBtn}>{t('Get Started') || 'Get Started'}</Link>
+            <Link to="/app" style={styles.dashboardBtn}>{t('Dashboard') || 'Dashboard'}</Link>
+          </div>
+        </div>
+        {/* Language Switcher Button */}
             <button
               onClick={toggleLanguage}
               style={{
@@ -63,12 +70,6 @@ const PublicHomepage = () => {
             >
               {getLanguageLabel()}
             </button>
-            
-            <Link to="/login" style={styles.loginBtn}>{t('Sign In') || 'Sign In'}</Link>
-            <Link to="/register" style={styles.getStartedBtn}>{t('Get Started') || 'Get Started'}</Link>
-            <Link to="/app" style={styles.dashboardBtn}>{t('Dashboard') || 'Dashboard'}</Link>
-          </div>
-        </div>
       </nav>
 
       {/* Hero Section with Background Image */}
