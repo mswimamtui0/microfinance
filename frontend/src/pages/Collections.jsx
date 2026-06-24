@@ -1,46 +1,77 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { loanAPI } from '../api';
+import { loanAPI, paymentAPI } from '../api';
 import Loading from '../components/Common/Loading';
 import { formatCurrency, formatDate } from '../utils/formatters';
 import { Link } from 'react-router-dom';
-import * as XLSX from 'xlsx';
-import { saveAs } from 'file-saver';
 
 const Collections = () => {
   const [filter, setFilter] = useState('all');
-  
-  // Fetch ALL loans with their schedules
-  const { data: loans, isLoading, refetch } = useQuery({
-    queryKey: ['loans-with-schedules'],
+  const [allSchedules, setAllSchedules] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch all loans
+  const { data: loans, isLoading: loansLoading, refetch } = useQuery({
+    queryKey: ['all-loans'],
     queryFn: () => loanAPI.getAll({ limit: 1000 }),
   });
 
-  if (isLoading) return <Loading />;
+  // Fetch all payments
+  const { data: payments } = useQuery({
+    queryKey: ['all-payments'],
+    queryFn: () => paymentAPI.getAll({ limit: 1000 }),
+  });
+
+  // Process schedules from loans
+  useEffect(() => {
+    if (loans?.data?.results) {
+      const schedules = [];
+      loans.data.results.forEach(loan => {
+        // Check if loan has schedules
+        if (loan.schedules && loan.schedules.length > 0) {
+          loan.schedules.forEach(schedule => {
+            // Only include pending or overdue schedules
+            if (schedule.status === 'pending' || schedule.status === 'overdue' || schedule.status === 'partial') {
+              schedules.push({
+                ...schedule,
+                loan: loan,
+                customer: loan.customer_details || loan.customer || { first_name: 'Unknown', last_name: '' }
+              });
+            }
+          });
+        } else {
+          // If no schedules, create a dummy schedule from loan data
+          // This ensures loans without schedules still appear
+          if (loan.status === 'active' || loan.status === 'disbursed') {
+            schedules.push({
+              id: `loan-${loan.id}`,
+              installment_no: 1,
+              due_date: loan.maturity_date || new Date().toISOString().split('T')[0],
+              principal_amount: loan.principal || 0,
+              interest_amount: loan.total_interest || 0,
+              penalty_amount: 0,
+              total_due: loan.outstanding_balance || loan.principal || 0,
+              status: loan.is_overdue ? 'overdue' : 'pending',
+              loan: loan,
+              customer: loan.customer_details || loan.customer || { first_name: 'Unknown', last_name: '' }
+            });
+          }
+        }
+      });
+      setAllSchedules(schedules);
+      setLoading(false);
+    }
+  }, [loans]);
+
+  if (loansLoading || loading) {
+    return <Loading />;
+  }
 
   const today = new Date();
   const todayStr = today.toISOString().split('T')[0];
   const tomorrow = new Date(today);
   tomorrow.setDate(tomorrow.getDate() + 1);
   const tomorrowStr = tomorrow.toISOString().split('T')[0];
-
-  const allLoans = loans?.data?.results || [];
-  
-  // Collect all schedules from all loans
-  const allSchedules = [];
-  allLoans.forEach(loan => {
-    if (loan.schedules && loan.schedules.length > 0) {
-      loan.schedules.forEach(schedule => {
-        if (schedule.status === 'pending' || schedule.status === 'overdue' || schedule.status === 'partial') {
-          allSchedules.push({
-            ...schedule,
-            loan: loan,
-            customer: loan.customer_details || loan.customer
-          });
-        }
-      });
-    }
-  });
 
   // Filter schedules based on selection
   const filteredSchedules = allSchedules.filter(item => {
@@ -60,7 +91,7 @@ const Collections = () => {
   const dueToday = allSchedules.filter(c => c.due_date === todayStr);
   const dueTomorrow = allSchedules.filter(c => c.due_date === tomorrowStr);
   const overdue = allSchedules.filter(c => c.status === 'overdue');
-  const defaulters = allLoans.filter(l => l.status === 'defaulted');
+  const defaulters = loans?.data?.results?.filter(l => l.status === 'defaulted') || [];
 
   const stats = [
     { 
@@ -68,123 +99,36 @@ const Collections = () => {
       count: dueToday.length,
       total: dueToday.reduce((sum, c) => sum + (parseFloat(c.total_due) || 0), 0),
       color: '#f59e0b',
-      icon: '📅'
     },
     { 
       name: 'Due Tomorrow', 
       count: dueTomorrow.length,
       total: dueTomorrow.reduce((sum, c) => sum + (parseFloat(c.total_due) || 0), 0),
       color: '#3b82f6',
-      icon: '📆'
     },
     { 
       name: 'Overdue', 
       count: overdue.length,
       total: overdue.reduce((sum, c) => sum + (parseFloat(c.total_due) || 0), 0),
       color: '#ef4444',
-      icon: '⚠️'
     },
     { 
       name: 'Defaulters', 
       count: defaulters.length,
       total: defaulters.reduce((sum, l) => sum + (parseFloat(l.outstanding_balance) || 0), 0),
       color: '#dc2626',
-      icon: '🚫'
     },
   ];
 
-  // Export to Excel/CSV
-  const exportReport = () => {
-    if (filteredSchedules.length === 0) {
-      alert('No data to export. Please check your collections.');
-      return;
-    }
-
-    // Prepare data for export
-    const exportData = filteredSchedules.map(item => ({
-      'Customer': `${item.customer?.first_name || 'Unknown'} ${item.customer?.last_name || ''}`,
-      'Phone': item.customer?.phone || '',
-      'Loan No': item.loan?.loan_no || 'N/A',
-      'Installment': `#${item.installment_no}`,
-      'Due Date': formatDate(item.due_date),
-      'Amount Due': parseFloat(item.total_due) || 0,
-      'Penalty': parseFloat(item.penalty_amount) || 0,
-      'Total Due': (parseFloat(item.total_due) || 0) + (parseFloat(item.penalty_amount) || 0),
-      'Status': item.status,
-      'Days Overdue': item.status === 'overdue' ? Math.max(0, Math.floor((new Date() - new Date(item.due_date)) / (1000 * 60 * 60 * 24))) : 0,
-    }));
-
-    // Create worksheet
-    const ws = XLSX.utils.json_to_sheet(exportData);
-    
-    // Set column widths
-    ws['!cols'] = [
-      { wch: 20 }, // Customer
-      { wch: 15 }, // Phone
-      { wch: 15 }, // Loan No
-      { wch: 12 }, // Installment
-      { wch: 15 }, // Due Date
-      { wch: 15 }, // Amount Due
-      { wch: 15 }, // Penalty
-      { wch: 15 }, // Total Due
-      { wch: 12 }, // Status
-      { wch: 15 }, // Days Overdue
-    ];
-
-    // Create workbook
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Collections');
-
-    // Generate file
-    const filename = `Collections_Report_${new Date().toISOString().split('T')[0]}.xlsx`;
-    const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-    const blob = new Blob([wbout], { type: 'application/octet-stream' });
-    saveAs(blob, filename);
-  };
-
-  // Export Summary Report
-  const exportSummary = () => {
-    const summaryData = [
-      {
-        'Metric': 'Total Collections',
-        'Value': allSchedules.length
-      },
-      {
-        'Metric': 'Due Today',
-        'Value': dueToday.length
-      },
-      {
-        'Metric': 'Due Tomorrow',
-        'Value': dueTomorrow.length
-      },
-      {
-        'Metric': 'Overdue',
-        'Value': overdue.length
-      },
-      {
-        'Metric': 'Defaulters',
-        'Value': defaulters.length
-      },
-      {
-        'Metric': 'Total Overdue Amount',
-        'Value': overdue.reduce((sum, c) => sum + (parseFloat(c.total_due) || 0), 0)
-      },
-      {
-        'Metric': 'Collection Rate',
-        'Value': allSchedules.length > 0 ? 
-          `${Math.round(((allSchedules.length - overdue.length) / allSchedules.length) * 100)}%` : 
-          '0%'
-      }
-    ];
-
-    const ws = XLSX.utils.json_to_sheet(summaryData);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Summary');
-    
-    const filename = `Collections_Summary_${new Date().toISOString().split('T')[0]}.xlsx`;
-    const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-    const blob = new Blob([wbout], { type: 'application/octet-stream' });
-    saveAs(blob, filename);
+  // Get status color
+  const getStatusColor = (status) => {
+    const colors = {
+      pending: 'bg-yellow-100 text-yellow-800',
+      paid: 'bg-green-100 text-green-800',
+      overdue: 'bg-red-100 text-red-800',
+      partial: 'bg-blue-100 text-blue-800',
+    };
+    return colors[status] || 'bg-gray-100 text-gray-800';
   };
 
   return (
@@ -194,22 +138,10 @@ const Collections = () => {
         <h1 className="text-2xl font-semibold text-gray-900">Collections Dashboard</h1>
         <div className="flex gap-2">
           <button 
-            onClick={exportReport}
-            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-          >
-            Export Report
-          </button>
-          <button 
-            onClick={exportSummary}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            Export Summary
-          </button>
-          <button 
             onClick={() => refetch()} 
             className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
           >
-            Refresh
+            Refresh Data
           </button>
         </div>
       </div>
@@ -234,46 +166,23 @@ const Collections = () => {
                 <p style={{ fontSize: '28px', fontWeight: 'bold', color: '#1f2937' }}>{stat.count}</p>
                 <p style={{ fontSize: '12px', color: '#6b7280' }}>{formatCurrency(stat.total)}</p>
               </div>
-              <span style={{ fontSize: '32px' }}>{stat.icon}</span>
+              <div style={{
+                width: '40px',
+                height: '40px',
+                borderRadius: '50%',
+                background: stat.color,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: 'white',
+                fontWeight: 'bold',
+                fontSize: '18px'
+              }}>
+                {stat.count}
+              </div>
             </div>
           </div>
         ))}
-      </div>
-
-      {/* Real-Time Collection Summary */}
-      <div style={{
-        background: 'white',
-        borderRadius: '12px',
-        padding: '16px',
-        border: '1px solid #e5e7eb'
-      }}>
-        <h3 className="text-lg font-semibold text-gray-900 mb-3">Real-Time Collection Status</h3>
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(4, 1fr)',
-          gap: '16px'
-        }}>
-          <div className="text-center p-3 bg-green-50 rounded-lg">
-            <p className="text-sm text-gray-500">Today's Collections</p>
-            <p className="text-xl font-bold text-green-600">{formatCurrency(0)}</p>
-          </div>
-          <div className="text-center p-3 bg-yellow-50 rounded-lg">
-            <p className="text-sm text-gray-500">Expected Today</p>
-            <p className="text-xl font-bold text-yellow-600">{formatCurrency(dueToday.reduce((sum, c) => sum + (parseFloat(c.total_due) || 0), 0))}</p>
-          </div>
-          <div className="text-center p-3 bg-red-50 rounded-lg">
-            <p className="text-sm text-gray-500">Overdue Amount</p>
-            <p className="text-xl font-bold text-red-600">{formatCurrency(overdue.reduce((sum, c) => sum + (parseFloat(c.total_due) || 0), 0))}</p>
-          </div>
-          <div className="text-center p-3 bg-blue-50 rounded-lg">
-            <p className="text-sm text-gray-500">Collection Rate</p>
-            <p className="text-xl font-bold text-blue-600">
-              {allSchedules.length > 0 ? 
-                `${Math.round(((allSchedules.length - overdue.length) / allSchedules.length) * 100)}%` : 
-                '0%'}
-            </p>
-          </div>
-        </div>
       </div>
 
       {/* Filter Tabs */}
@@ -359,30 +268,30 @@ const Collections = () => {
       </div>
 
       {/* Collections Table */}
-      <div style={{
-        background: 'white',
-        borderRadius: '12px',
-        border: '1px solid #e5e7eb',
-        overflow: 'hidden'
-      }}>
-        <div className="overflow-x-auto">
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead style={{ background: '#f9fafb' }}>
-              <tr>
-                <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '500', color: '#6b7280' }}>Customer</th>
-                <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '500', color: '#6b7280' }}>Loan</th>
-                <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '500', color: '#6b7280' }}>Installment</th>
-                <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '500', color: '#6b7280' }}>Due Date</th>
-                <th style={{ padding: '12px 16px', textAlign: 'right', fontSize: '12px', fontWeight: '500', color: '#6b7280' }}>Amount</th>
-                <th style={{ padding: '12px 16px', textAlign: 'right', fontSize: '12px', fontWeight: '500', color: '#6b7280' }}>Penalty</th>
-                <th style={{ padding: '12px 16px', textAlign: 'right', fontSize: '12px', fontWeight: '500', color: '#6b7280' }}>Total</th>
-                <th style={{ padding: '12px 16px', textAlign: 'center', fontSize: '12px', fontWeight: '500', color: '#6b7280' }}>Status</th>
-                <th style={{ padding: '12px 16px', textAlign: 'center', fontSize: '12px', fontWeight: '500', color: '#6b7280' }}>Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredSchedules.length > 0 ? (
-                filteredSchedules.map((item) => (
+      {filteredSchedules.length > 0 ? (
+        <div style={{
+          background: 'white',
+          borderRadius: '12px',
+          border: '1px solid #e5e7eb',
+          overflow: 'hidden'
+        }}>
+          <div className="overflow-x-auto">
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead style={{ background: '#f9fafb' }}>
+                <tr>
+                  <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '500', color: '#6b7280' }}>Customer</th>
+                  <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '500', color: '#6b7280' }}>Loan</th>
+                  <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '500', color: '#6b7280' }}>Installment</th>
+                  <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '500', color: '#6b7280' }}>Due Date</th>
+                  <th style={{ padding: '12px 16px', textAlign: 'right', fontSize: '12px', fontWeight: '500', color: '#6b7280' }}>Amount</th>
+                  <th style={{ padding: '12px 16px', textAlign: 'right', fontSize: '12px', fontWeight: '500', color: '#6b7280' }}>Penalty</th>
+                  <th style={{ padding: '12px 16px', textAlign: 'right', fontSize: '12px', fontWeight: '500', color: '#6b7280' }}>Total</th>
+                  <th style={{ padding: '12px 16px', textAlign: 'center', fontSize: '12px', fontWeight: '500', color: '#6b7280' }}>Status</th>
+                  <th style={{ padding: '12px 16px', textAlign: 'center', fontSize: '12px', fontWeight: '500', color: '#6b7280' }}>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredSchedules.map((item) => (
                   <tr key={item.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
                     <td style={{ padding: '12px 16px' }}>
                       <span style={{ fontWeight: '500' }}>
@@ -394,7 +303,7 @@ const Collections = () => {
                       {item.loan?.loan_no || 'N/A'}
                     </td>
                     <td style={{ padding: '12px 16px', fontSize: '14px', color: '#6b7280' }}>
-                      #{item.installment_no} of {item.loan?.term_months || 0}
+                      #{item.installment_no}
                     </td>
                     <td style={{ padding: '12px 16px', fontSize: '14px' }}>
                       {formatDate(item.due_date)}
@@ -421,16 +330,7 @@ const Collections = () => {
                       {formatCurrency((parseFloat(item.total_due) || 0) + (parseFloat(item.penalty_amount) || 0))}
                     </td>
                     <td style={{ padding: '12px 16px', textAlign: 'center' }}>
-                      <span style={{
-                        padding: '4px 12px',
-                        borderRadius: '20px',
-                        fontSize: '12px',
-                        fontWeight: '500',
-                        background: item.status === 'overdue' ? '#fef2f2' : 
-                                   item.status === 'partial' ? '#eff6ff' : '#fef3c7',
-                        color: item.status === 'overdue' ? '#dc2626' : 
-                               item.status === 'partial' ? '#2563eb' : '#d97706'
-                      }}>
+                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(item.status)}`}>
                         {item.status}
                       </span>
                     </td>
@@ -451,21 +351,27 @@ const Collections = () => {
                       </Link>
                     </td>
                   </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan="9" style={{ padding: '40px', textAlign: 'center', color: '#6b7280' }}>
-                    No collection records found.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
+      ) : (
+        <div style={{
+          background: 'white',
+          borderRadius: '12px',
+          padding: '40px',
+          textAlign: 'center',
+          border: '1px solid #e5e7eb'
+        }}>
+          <p style={{ fontSize: '16px', color: '#6b7280' }}>No collection records found.</p>
+          <p style={{ fontSize: '14px', color: '#9ca3af', marginTop: '8px' }}>
+            Make sure you have active loans with repayment schedules.
+          </p>
+        </div>
+      )}
     </div>
   );
 };
 
 export default Collections;
-
