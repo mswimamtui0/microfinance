@@ -55,42 +55,42 @@ const ManagerDashboard = ({ user }) => {
 
   const stats = [
     {
-      name: 'Branch Portfolio',
+      name: t('Branch Portfolio'),
       value: formatCurrency(portfolio?.data?.total_portfolio || 0),
       change: '+8.5%',
       changeType: 'positive',
       color: '#0ea5e9',
     },
     {
-      name: 'Active Loans',
+      name: t('Active Loans'),
       value: portfolio?.data?.active_loans || 0,
       change: '+4.2%',
       changeType: 'positive',
       color: '#22c55e',
     },
     {
-      name: 'Branch Clients',
+      name: t('Branch Clients'),
       value: portfolio?.data?.total_customers || 0,
       change: '+6.1%',
       changeType: 'positive',
       color: '#8b5cf6',
     },
     {
-      name: 'Collection Rate',
+      name: t('Collection Rate'),
       value: `${portfolio?.data?.collection_rate || 0}%`,
       change: portfolio?.data?.collection_rate > 85 ? '+2.5%' : '-1.5%',
       changeType: portfolio?.data?.collection_rate > 85 ? 'positive' : 'negative',
       color: '#f59e0b',
     },
     {
-      name: 'Overdue Loans',
+      name: t('Overdue Loans'),
       value: portfolio?.data?.overdue_loans || 0,
       change: '-3.2%',
       changeType: 'positive',
       color: '#ef4444',
     },
     {
-      name: 'Pending Approvals',
+      name: t('Pending Approvals'),
       value: loans?.data?.results?.filter(l => l.status === 'pending').length || 0,
       change: '+2',
       changeType: 'neutral',
@@ -98,19 +98,18 @@ const ManagerDashboard = ({ user }) => {
     },
   ];
 
-  // Bar Chart Data - Branch Performance
   const barChartData = {
     labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
     datasets: [
       {
-        label: 'Disbursements',
+        label: t('Disbursements'),
         data: [8000000, 10000000, 12000000, 15000000, 18000000, 20000000],
         backgroundColor: 'rgba(14, 165, 233, 0.8)',
         borderColor: 'rgb(14, 165, 233)',
         borderWidth: 2,
       },
       {
-        label: 'Collections',
+        label: t('Collections'),
         data: [5000000, 7000000, 9000000, 11000000, 14000000, 16000000],
         backgroundColor: 'rgba(34, 197, 94, 0.8)',
         borderColor: 'rgb(34, 197, 94)',
@@ -119,9 +118,8 @@ const ManagerDashboard = ({ user }) => {
     ],
   };
 
-  // Doughnut Chart Data - Portfolio Quality
   const doughnutData = {
-    labels: ['Performing', 'Overdue', 'Defaulted'],
+    labels: [t('Performing'), t('Overdue'), t('Defaulted')],
     datasets: [
       {
         data: [portfolio?.data?.performing || 80, portfolio?.data?.overdue_rate || 12, portfolio?.data?.default_rate || 8],
@@ -169,34 +167,32 @@ const ManagerDashboard = ({ user }) => {
   };
 
   const quickActions = [
-    { name: 'New Loan', href: '/loans/new', color: '#0ea5e9' },
-    { name: 'Approve Loans', href: '/loans/pending', color: '#22c55e' },
-    { name: 'View Reports', href: '/reports', color: '#6366f1' },
-    { name: 'Manage Branch', href: '/branches', color: '#8b5cf6' },
+    { name: t('New Loan'), href: '/loans/new', color: '#0ea5e9' },
+    { name: t('Approve Loans'), href: '/loans/pending', color: '#22c55e' },
+    { name: t('View Reports'), href: '/reports', color: '#6366f1' },
+    { name: t('Manage Branch'), href: '/branches', color: '#8b5cf6' },
   ];
 
   return (
     <div className="space-y-6">
-      {/* Welcome Section */}
       <div style={{ background: 'linear-gradient(135deg, #16a34a, #059669)', borderRadius: '16px', padding: '24px', color: 'white' }}>
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center">
           <div>
-            <h1 className="text-2xl font-bold">Welcome, {user?.first_name || user?.username}!</h1>
-            <p style={{ opacity: 0.9, marginTop: '4px' }}>Branch Manager • {user?.branch_name || 'Branch'}</p>
+            <h1 className="text-2xl font-bold">{t('Welcome')}, {user?.first_name || user?.username}!</h1>
+            <p style={{ opacity: 0.9, marginTop: '4px' }}>{t('Branch Manager')} • {user?.branch_name || t('Branch')}</p>
             <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
-              <span style={{ padding: '4px 12px', background: 'rgba(255,255,255,0.2)', borderRadius: '20px', fontSize: '12px' }}>Manager</span>
-              <span style={{ padding: '4px 12px', background: 'rgba(255,255,255,0.2)', borderRadius: '20px', fontSize: '12px' }}>{user?.branch_name || 'Branch'}</span>
+              <span style={{ padding: '4px 12px', background: 'rgba(255,255,255,0.2)', borderRadius: '20px', fontSize: '12px' }}>{t('Manager')}</span>
+              <span style={{ padding: '4px 12px', background: 'rgba(255,255,255,0.2)', borderRadius: '20px', fontSize: '12px' }}>{user?.branch_name || t('Branch')}</span>
             </div>
           </div>
           <div style={{ marginTop: '16px' }}>
             <button style={{ padding: '8px 16px', background: 'white', color: '#059669', borderRadius: '8px', border: 'none', fontWeight: '500', cursor: 'pointer' }}>
-              Export Branch Report
+              {t('Export Branch Report')}
             </button>
           </div>
         </div>
       </div>
 
-      {/* Stats Grid */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px' }}>
         {stats.map((stat) => (
           <div key={stat.name} style={{ background: 'white', borderRadius: '12px', padding: '16px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', border: '1px solid #e5e7eb' }}>
@@ -207,9 +203,8 @@ const ManagerDashboard = ({ user }) => {
         ))}
       </div>
 
-      {/* Quick Actions */}
       <div style={{ background: 'white', borderRadius: '12px', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', border: '1px solid #e5e7eb' }}>
-        <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px' }}>Quick Actions</h3>
+        <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px' }}>{t('Quick Actions')}</h3>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '12px' }}>
           {quickActions.map((action) => (
             <Link key={action.name} to={action.href} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '16px', border: '1px solid #e5e7eb', borderRadius: '12px', textDecoration: 'none', color: '#374151', background: 'white' }}>
@@ -222,35 +217,30 @@ const ManagerDashboard = ({ user }) => {
         </div>
       </div>
 
-      {/* Charts */}
       <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '24px' }}>
-        {/* Bar Chart */}
         <div style={{ background: 'white', borderRadius: '12px', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', border: '1px solid #e5e7eb' }}>
-          <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px' }}>Branch Performance</h3>
+          <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px' }}>{t('Branch Performance')}</h3>
           <div style={{ height: '300px' }}>
             <Bar data={barChartData} options={barOptions} />
           </div>
         </div>
-
-        {/* Doughnut Chart */}
         <div style={{ background: 'white', borderRadius: '12px', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', border: '1px solid #e5e7eb' }}>
-          <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px' }}>Portfolio Quality</h3>
+          <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px' }}>{t('Portfolio Quality')}</h3>
           <div style={{ height: '250px' }}>
             <Doughnut data={doughnutData} options={doughnutOptions} />
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', marginTop: '12px', textAlign: 'center' }}>
-            <div><p style={{ fontWeight: '600', color: '#22c55e' }}>{portfolio?.data?.performing || 80}%</p><p style={{ fontSize: '12px', color: '#6b7280' }}>Performing</p></div>
-            <div><p style={{ fontWeight: '600', color: '#f59e0b' }}>{portfolio?.data?.overdue_rate || 12}%</p><p style={{ fontSize: '12px', color: '#6b7280' }}>Overdue</p></div>
-            <div><p style={{ fontWeight: '600', color: '#ef4444' }}>{portfolio?.data?.default_rate || 8}%</p><p style={{ fontSize: '12px', color: '#6b7280' }}>Defaulted</p></div>
+            <div><p style={{ fontWeight: '600', color: '#22c55e' }}>{portfolio?.data?.performing || 80}%</p><p style={{ fontSize: '12px', color: '#6b7280' }}>{t('Performing')}</p></div>
+            <div><p style={{ fontWeight: '600', color: '#f59e0b' }}>{portfolio?.data?.overdue_rate || 12}%</p><p style={{ fontSize: '12px', color: '#6b7280' }}>{t('Overdue')}</p></div>
+            <div><p style={{ fontWeight: '600', color: '#ef4444' }}>{portfolio?.data?.default_rate || 8}%</p><p style={{ fontSize: '12px', color: '#6b7280' }}>{t('Defaulted')}</p></div>
           </div>
         </div>
       </div>
 
-      {/* Pending Approvals */}
       <div style={{ background: 'white', borderRadius: '12px', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', border: '1px solid #e5e7eb' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '16px' }}>
-          <h3 style={{ fontSize: '18px', fontWeight: '600' }}>Pending Approvals</h3>
-          <Link to="/loans/pending" style={{ color: '#0284c7', fontSize: '14px' }}>View All →</Link>
+          <h3 style={{ fontSize: '18px', fontWeight: '600' }}>{t('Pending Approvals')}</h3>
+          <Link to="/loans/pending" style={{ color: '#0284c7', fontSize: '14px' }}>{t('View All')} →</Link>
         </div>
         {loans?.data?.results?.filter(l => l.status === 'pending').slice(0, 5).map((loan) => (
           <div key={loan.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '12px', background: '#fefce8', borderRadius: '8px', border: '1px solid #fde68a', marginBottom: '8px' }}>
@@ -260,12 +250,12 @@ const ManagerDashboard = ({ user }) => {
             </div>
             <div style={{ textAlign: 'right' }}>
               <p style={{ fontWeight: '600', fontSize: '14px' }}>{formatCurrency(loan.principal)}</p>
-              <Link to={`/loans/${loan.id}/approve`} style={{ color: '#22c55e', fontSize: '12px' }}>Approve Now →</Link>
+              <Link to={`/loans/${loan.id}/approve`} style={{ color: '#22c55e', fontSize: '12px' }}>{t('Approve Now')} →</Link>
             </div>
           </div>
         ))}
         {(!loans?.data?.results?.filter(l => l.status === 'pending')?.length) && (
-          <p style={{ color: '#6b7280', fontSize: '14px', textAlign: 'center', padding: '16px' }}>No pending approvals</p>
+          <p style={{ color: '#6b7280', fontSize: '14px', textAlign: 'center', padding: '16px' }}>{t('No pending approvals')}</p>
         )}
       </div>
     </div>
