@@ -1,17 +1,19 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-
-const navigation = [
-  { name: 'Dashboard', href: '/app' },
-  { name: 'Customers', href: '/customers' },
-  { name: 'Loans', href: '/loans' },
-  { name: 'Payments', href: '/payments' },
-  { name: 'Collections', href: '/collections' },
-  { name: 'Reports', href: '/reports' },
-  { name: 'Loan Products', href: '/loan-products' },
-];
+import { useTranslation } from 'react-i18next';  // Add this
 
 const Sidebar = () => {
+  const { t } = useTranslation();  // Add this
+
+  const navigation = [
+    { name: t('Dashboard'), href: '/app' },
+    { name: t('Customers'), href: '/customers' },
+    { name: t('Loans'), href: '/loans' },
+    { name: t('Payments'), href: '/payments' },
+    { name: t('Collections'), href: '/collections' },
+    { name: t('Reports'), href: '/reports' },
+  ];
+
   return (
     <div className="flex flex-col h-full bg-white border-r border-gray-200">
       <div className="flex items-center h-16 px-4 border-b border-gray-200">
@@ -48,7 +50,7 @@ const Sidebar = () => {
           </div>
           <div className="ml-3">
             <p className="text-sm font-medium text-gray-900">John Doe</p>
-            <p className="text-xs text-gray-500">Loan Officer</p>
+            <p className="text-xs text-gray-500">{t('Loan Officer')}</p>
           </div>
         </div>
       </div>

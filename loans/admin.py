@@ -1,6 +1,12 @@
 from django.contrib import admin
 from .models import Loan, LoanProduct, LoanSchedule
 
+# Unregister if already registered
+try:
+    admin.site.unregister(Loan)
+except admin.sites.NotRegistered:
+    pass
+
 @admin.register(LoanProduct)
 class LoanProductAdmin(admin.ModelAdmin):
     list_display = ['product_name', 'product_code', 'interest_rate', 'min_amount', 'max_amount', 'is_active']
@@ -32,14 +38,14 @@ class LoanProductAdmin(admin.ModelAdmin):
         }),
     )
 
-@admin.register(Loan)
+
 @admin.register(Loan)
 class LoanAdmin(admin.ModelAdmin):
     list_display = ['loan_no', 'customer', 'product', 'principal', 'status', 'outstanding_balance', 'created_at']
     list_filter = ['status', 'product', 'branch', 'disbursement_date']
     search_fields = ['loan_no', 'customer__first_name', 'customer__last_name']
-    readonly_fields = ['loan_no', 'application_date', 'total_interest', 'total_payable', 'amount_paid', 'outstanding_balance', 'created_at', 'updated_at']
-
+    readonly_fields = ['loan_no', 'total_interest', 'total_payable', 'amount_paid', 'outstanding_balance']
+    
     fieldsets = (
         ('Loan Information', {
             'fields': ('loan_no', 'customer', 'product', 'branch')
@@ -54,14 +60,22 @@ class LoanAdmin(admin.ModelAdmin):
             'fields': ('total_interest', 'total_payable', 'amount_paid', 'outstanding_balance')
         }),
         ('Dates', {
-            'fields': ('approval_date', 'disbursement_date', 'maturity_date', 'closed_date')  # removed application_date
+            'fields': ('application_date', 'approval_date', 'disbursement_date', 'maturity_date', 'closed_date')
         }),
         ('Status', {
             'fields': ('status', 'is_overdue', 'days_overdue', 'notes')
         }),
+        ('Approvals', {
+            'fields': ('approved_by', 'disbursed_by', 'created_by'),
+            'classes': ('collapse',)
+        }),
     )
+
+
 @admin.register(LoanSchedule)
 class LoanScheduleAdmin(admin.ModelAdmin):
     list_display = ['loan', 'installment_no', 'due_date', 'total_due', 'status']
     list_filter = ['status', 'due_date']
     search_fields = ['loan__loan_no']
+    
+    readonly_fields = ['created_at', 'updated_at']

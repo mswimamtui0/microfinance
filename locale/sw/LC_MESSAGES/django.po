@@ -1,0 +1,306 @@
+#: templates/admin/index.html
+msgid "Site administration"
+msgstr "Usimamizi wa Tovuti"
+
+#: templates/admin/index.html
+msgid "Authentication and Authorization"
+msgstr "Uthibitishaji na Uidhinishaji"
+
+#: templates/admin/index.html
+msgid "Groups"
+msgstr "Vikundi"
+
+#: templates/admin/index.html
+msgid "Users"
+msgstr "Watumiaji"
+
+#: templates/admin/index.html
+msgid "Add"
+msgstr "Ongeza"
+
+#: templates/admin/index.html
+msgid "Change"
+msgstr "Badilisha"
+
+#: templates/admin/login.html
+msgid "Username"
+msgstr "Jina la Mtumiaji"
+
+#: templates/admin/login.html
+msgid "Password"
+msgstr "Nenosiri"
+
+#: templates/admin/login.html
+msgid "Log in"
+msgstr "Ingia"
+
+#: templates/admin/login.html
+msgid "Forgot password"
+msgstr "Umesahau nenosiri"
+
+#: customers/models.py
+msgid "Customer"
+msgstr "Mteja"
+
+#: customers/models.py
+msgid "First name"
+msgstr "Jina la kwanza"
+
+#: customers/models.py
+msgid "Last name"
+msgstr "Jina la mwisho"
+
+#: customers/models.py
+msgid "Phone"
+msgstr "Simu"
+
+#: customers/models.py
+msgid "Email"
+msgstr "Barua pepe"
+
+#: customers/models.py
+msgid "Region"
+msgstr "Mkoa"
+
+#: customers/models.py
+msgid "District"
+msgstr "Wilaya"
+
+#: customers/models.py
+msgid "Occupation"
+msgstr "Kazi"
+
+#: customers/models.py
+msgid "Monthly income"
+msgstr "Mapato ya mwezi"
+
+#: loans/models.py
+msgid "Loan"
+msgstr "Mkopo"
+
+#: loans/models.py
+msgid "Loan Product"
+msgstr "Bidhaa ya Mkopo"
+
+#: loans/models.py
+msgid "Principal"
+msgstr "Kiasi cha mkopo"
+
+#: loans/models.py
+msgid "Interest Rate"
+msgstr "Kiwango cha riba"
+
+#: loans/models.py
+msgid "Term"
+msgstr "Muda"
+
+#: loans/models.py
+msgid "Repayment"
+msgstr "Malipo"
+
+#: loans/models.py
+msgid "Penalty"
+msgstr "Adhabu"
+
+#: loans/models.py
+msgid "Status"
+msgstr "Hali"
+
+#: loans/models.py
+msgid "Pending"
+msgstr "Inasubiri"
+
+#: loans/models.py
+msgid "Approved"
+msgstr "Imekubaliwa"
+
+#: loans/models.py
+msgid "Disbursed"
+msgstr "Imetolewa"
+
+#: loans/models.py
+msgid "Active"
+msgstr "Inaendelea"
+
+#: loans/models.py
+msgid "Paid"
+msgstr "Imelipwa"
+
+#: loans/models.py
+msgid "Defaulted"
+msgstr "Imeshindwa"
+
+#: payments/models.py
+msgid "Payment"
+msgstr "Malipo"
+
+#: payments/models.py
+msgid "Amount"
+msgstr "Kiasi"
+
+#: payments/models.py
+msgid "Payment Method"
+msgstr "Njia ya malipo"
+
+#: payments/models.py
+msgid "Cash"
+msgstr "Pesa taslimu"
+
+#: payments/models.py
+msgid "M-Pesa"
+msgstr "M-Pesa"
+
+#: payments/models.py
+msgid "Airtel Money"
+msgstr "Airtel Money"
+
+#: payments/models.py
+msgid "Bank"
+msgstr "Benki"
+
+#: reports/models.py
+msgid "Report"
+msgstr "Ripoti"
+
+#: reports/models.py
+msgid "Daily Report"
+msgstr "Ripoti ya Kila Siku"
+
+#: reports/models.py
+msgid "Weekly Report"
+msgstr "Ripoti ya Kila Wiki"
+
+#: reports/models.py
+msgid "Monthly Report"
+msgstr "Ripoti ya Kila Mwezi"
+
+#: reports/models.py
+msgid "Collection Report"
+msgstr "Ripoti ya Makusanyo"
+
+#: notifications/models.py
+msgid "Notification"
+msgstr "Arifa"
+
+#: notifications/models.py
+msgid "SMS"
+msgstr "SMS"
+
+#: notifications/models.py
+msgid "Email"
+msgstr "Barua pepe"
+
+#: accounts/models.py
+msgid "Role"
+msgstr "Jukumu"
+
+#: accounts/models.py
+msgid "Admin"
+msgstr "Msimamizi"
+
+#: accounts/models.py
+msgid "Manager"
+msgstr "Meneja"
+
+#: accounts/models.py
+msgid "Officer"
+msgstr "Afisa"
+
+#: accounts/models.py
+msgid "Teller"
+msgstr "Mhazini"
+
+#: accounts/models.py
+msgid "Viewer"
+msgstr "Mtazamaji"
+
+# General
+msgid "Welcome"
+msgstr "Karibu"
+
+msgid "Dashboard"
+msgstr "Dashibodi"
+
+msgid "Logout"
+msgstr "Toka"
+
+msgid "Register"
+msgstr "Jisajili"
+
+msgid "Login"
+msgstr "Ingia"
+
+msgid "Create"
+msgstr "Unda"
+
+msgid "Save"
+msgstr "Hifadhi"
+
+msgid "Delete"
+msgstr "Futa"
+
+msgid "Edit"
+msgstr "Hariri"
+
+msgid "View"
+msgstr "Tazama"
+
+msgid "Search"
+msgstr "Tafuta"
+
+msgid "Filter"
+msgstr "Chuja"
+
+msgid "Total"
+msgstr "Jumla"
+
+msgid "Balance"
+msgstr "Salio"
+
+msgid "Due Date"
+msgstr "Tarehe ya Malipo"
+
+msgid "Overdue"
+msgstr "Imechelewa"
+
+msgid "Today"
+msgstr "Leo"
+
+msgid "Tomorrow"
+msgstr "Kesho"
+
+msgid "This Month"
+msgstr "Mwezi Huu"
+
+msgid "This Year"
+msgstr "Mwaka Huu"
+
+msgid "Success"
+msgstr "Imefanikiwa"
+
+msgid "Failed"
+msgstr "Imeshindwa"
+
+msgid "Loading..."
+msgstr "Inapakia..."
+
+msgid "No data"
+msgstr "Hakuna data"
+
+msgid "Please wait"
+msgstr "Tafadhali subiri"
+
+msgid "Are you sure?"
+msgstr "Una uhakika?"
+
+msgid "Yes"
+msgstr "Ndio"
+
+msgid "No"
+msgstr "Hapana"
+
+msgid "Cancel"
+msgstr "Ghairi"
+
+msgid "Confirm"
+msgstr "Thibitisha"

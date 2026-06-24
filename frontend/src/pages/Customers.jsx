@@ -4,8 +4,10 @@ import { customerAPI } from '../api';
 import CustomerForm from '../components/Customers/CustomerForm';
 import Loading from '../components/Common/Loading';
 import toast from 'react-hot-toast';
+import { useTranslation } from 'react-i18next';
 
 const Customers = () => {
+  const { t } = useTranslation();
   const [showForm, setShowForm] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');

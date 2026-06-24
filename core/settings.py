@@ -2,6 +2,20 @@ import os
 from pathlib import Path
 from decouple import config
 
+
+
+# Change this:
+LANGUAGE_CODE = 'en-us'
+
+# To this:
+LANGUAGE_CODE = 'sw'
+
+# Also add supported languages
+LANGUAGES = [
+    ('sw', 'Kiswahili'),
+    ('en', 'English'),
+]
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
