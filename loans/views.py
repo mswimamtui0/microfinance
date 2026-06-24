@@ -21,32 +21,32 @@ class LoanViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     
     def get_queryset(self):
-    queryset = super().get_queryset()
-    user = self.request.user
-    
-    # Admin can see all loans
-    if user.is_superuser or user.role == 'admin':
-        pass
-    # Manager sees only their branch
-    elif user.role == 'manager':
-        if user.branch:
-            queryset = queryset.filter(branch=user.branch)
-        else:
-            queryset = queryset.none()
-    # Officer sees only loans they created
-    elif user.role == 'officer':
-        queryset = queryset.filter(created_by=user)
-    # Teller sees all loans in their branch
-    elif user.role == 'teller':
-        if user.branch:
-            queryset = queryset.filter(branch=user.branch)
-        else:
-            queryset = queryset.none()
-    # Viewer sees all loans (read-only)
-    elif user.role == 'viewer':
-        pass
-    
-    return queryset
+        queryset = super().get_queryset()
+        user = self.request.user
+        
+        # Admin can see all loans
+        if user.is_superuser or user.role == 'admin':
+            pass
+        # Manager sees only their branch
+        elif user.role == 'manager':
+            if user.branch:
+                queryset = queryset.filter(branch=user.branch)
+            else:
+                queryset = queryset.none()
+        # Officer sees only loans they created
+        elif user.role == 'officer':
+            queryset = queryset.filter(created_by=user)
+        # Teller sees all loans in their branch
+        elif user.role == 'teller':
+            if user.branch:
+                queryset = queryset.filter(branch=user.branch)
+            else:
+                queryset = queryset.none()
+        # Viewer sees all loans (read-only)
+        elif user.role == 'viewer':
+            pass
+        
+        return queryset
     
     @transaction.atomic
     def create(self, request, *args, **kwargs):
@@ -180,75 +180,75 @@ class LoanViewSet(viewsets.ModelViewSet):
         return Response(summary)
     
     @action(detail=True, methods=['get'])
-def realtime_status(self, request, pk=None):
-    """Get real-time loan status"""
-    loan = self.get_object()
-    
-    # Calculate real-time status manually
-    from datetime import date, timedelta
-    from decimal import Decimal
-    
-    today = date.today()
-    
-    # Get loan details
-    total_payable = float(loan.total_payable)
-    amount_paid = float(loan.amount_paid)
-    outstanding = float(loan.outstanding_balance)
-    
-    # Calculate days
-    if loan.disbursement_date:
-        days_elapsed = (today - loan.disbursement_date).days
-        total_days = loan.term_months * 30
-        days_remaining = max(0, total_days - days_elapsed)
-    else:
-        days_elapsed = 0
-        total_days = loan.term_months * 30
-        days_remaining = total_days
-    
-    # Calculate per second, minute, hour, day
-    if total_days > 0 and total_payable > 0:
-        per_day = total_payable / total_days
-        per_hour = per_day / 24
-        per_minute = per_hour / 60
-        per_second = per_minute / 60
-    else:
-        per_day = 0
-        per_hour = 0
-        per_minute = 0
-        per_second = 0
-    
-    # Get next due date
-    next_due = None
-    if loan.schedules.exists():
-        next_schedule = loan.schedules.filter(status='pending').first()
-        if next_schedule:
-            next_due = next_schedule.due_date
+    def realtime_status(self, request, pk=None):
+        """Get real-time loan status"""
+        loan = self.get_object()
+        
+        # Calculate real-time status manually
+        from datetime import date, timedelta
+        from decimal import Decimal
+        
+        today = date.today()
+        
+        # Get loan details
+        total_payable = float(loan.total_payable)
+        amount_paid = float(loan.amount_paid)
+        outstanding = float(loan.outstanding_balance)
+        
+        # Calculate days
+        if loan.disbursement_date:
+            days_elapsed = (today - loan.disbursement_date).days
+            total_days = loan.term_months * 30
+            days_remaining = max(0, total_days - days_elapsed)
         else:
-            # Check if any schedule exists
-            last_schedule = loan.schedules.last()
-            if last_schedule:
-                next_due = last_schedule.due_date
-    
-    return Response({
-        'loan_id': loan.id,
-        'loan_no': loan.loan_no,
-        'status': loan.status,
-        'total_payable': total_payable,
-        'amount_paid': amount_paid,
-        'outstanding_balance': outstanding,
-        'per_second': per_second,
-        'per_minute': per_minute,
-        'per_hour': per_hour,
-        'per_day': per_day,
-        'time_elapsed': {
-            'days': days_elapsed,
-        },
-        'total_days': total_days,
-        'days_remaining': days_remaining,
-        'next_due_date': next_due,
-        'is_overdue': loan.is_overdue,
-        'days_overdue': loan.days_overdue,
-    })
+            days_elapsed = 0
+            total_days = loan.term_months * 30
+            days_remaining = total_days
+        
+        # Calculate per second, minute, hour, day
+        if total_days > 0 and total_payable > 0:
+            per_day = total_payable / total_days
+            per_hour = per_day / 24
+            per_minute = per_hour / 60
+            per_second = per_minute / 60
+        else:
+            per_day = 0
+            per_hour = 0
+            per_minute = 0
+            per_second = 0
+        
+        # Get next due date
+        next_due = None
+        if loan.schedules.exists():
+            next_schedule = loan.schedules.filter(status='pending').first()
+            if next_schedule:
+                next_due = next_schedule.due_date
+            else:
+                # Check if any schedule exists
+                last_schedule = loan.schedules.last()
+                if last_schedule:
+                    next_due = last_schedule.due_date
+        
+        return Response({
+            'loan_id': loan.id,
+            'loan_no': loan.loan_no,
+            'status': loan.status,
+            'total_payable': total_payable,
+            'amount_paid': amount_paid,
+            'outstanding_balance': outstanding,
+            'per_second': per_second,
+            'per_minute': per_minute,
+            'per_hour': per_hour,
+            'per_day': per_day,
+            'time_elapsed': {
+                'days': days_elapsed,
+            },
+            'total_days': total_days,
+            'days_remaining': days_remaining,
+            'next_due_date': next_due,
+            'is_overdue': loan.is_overdue,
+            'days_overdue': loan.days_overdue,
+        })
     
     @action(detail=True, methods=['post'])
     def calculate_early_repayment(self, request, pk=None):
