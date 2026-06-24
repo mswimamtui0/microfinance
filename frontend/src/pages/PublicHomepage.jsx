@@ -38,11 +38,10 @@ const PublicHomepage = () => {
             <a href="#about" style={styles.navLink}>{t('About') || 'About'}</a>
             <a href="#testimonials" style={styles.navLink}>{t('Testimonials') || 'Testimonials'}</a>
             
-            
-            
             <Link to="/login" style={styles.loginBtn}>{t('Sign In') || 'Sign In'}</Link>
             <Link to="/register" style={styles.getStartedBtn}>{t('Get Started') || 'Get Started'}</Link>
             <Link to="/app" style={styles.dashboardBtn}>{t('Dashboard') || 'Dashboard'}</Link>
+            
             {/* Language Switcher Button */}
             <button
               onClick={toggleLanguage}
@@ -70,12 +69,11 @@ const PublicHomepage = () => {
             </button>
           </div>
         </div>
-        
       </nav>
 
-      {/* Hero Section with Background Image */}
+      {/* Hero Section with Background Image - BLUE OVERLAY REMOVED */}
       <section style={{...styles.hero, backgroundImage: `url(${ceoImage})`}}>
-        <div style={styles.heroOverlay}></div>
+        {/* heroOverlay REMOVED - no blue overlay */}
         <div style={styles.heroContent}>
           <div style={styles.heroText}>
             <h1 style={styles.heroTitle}>
@@ -243,7 +241,7 @@ const PublicHomepage = () => {
   );
 };
 
-// Styles
+// Styles - heroOverlay REMOVED
 const styles = {
   nav: {
     padding: '16px 0',
@@ -335,15 +333,7 @@ const styles = {
     backgroundAttachment: 'fixed',
     marginTop: '-1px',
   },
-  heroOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    background: 'linear-gradient(135deg, rgba(2, 132, 199, 0.9) 0%, rgba(14, 165, 233, 0.7) 50%, rgba(2, 132, 199, 0.85) 100%)',
-    zIndex: 1,
-  },
+  // heroOverlay REMOVED - No blue overlay
   heroContent: {
     position: 'relative',
     zIndex: 2,
@@ -355,24 +345,24 @@ const styles = {
   heroText: {
     maxWidth: '650px',
     color: 'white',
+    textShadow: '0 2px 10px rgba(0,0,0,0.5)',
   },
   heroTitle: {
     fontSize: '52px',
     fontWeight: 'bold',
     lineHeight: '1.2',
     marginBottom: '20px',
-    textShadow: '0 2px 4px rgba(0,0,0,0.1)',
+    textShadow: '0 2px 10px rgba(0,0,0,0.5)',
   },
   heroHighlight: {
     color: '#fcd34d',
-    textShadow: '0 2px 8px rgba(0,0,0,0.2)',
+    textShadow: '0 2px 10px rgba(0,0,0,0.5)',
   },
   heroSubtitle: {
     fontSize: '20px',
     lineHeight: '1.6',
     marginBottom: '30px',
-    opacity: 0.95,
-    textShadow: '0 1px 3px rgba(0,0,0,0.1)',
+    textShadow: '0 2px 10px rgba(0,0,0,0.5)',
   },
   heroButtons: {
     display: 'flex',
