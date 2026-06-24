@@ -3,13 +3,6 @@ import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
-// Inside the component:
-const { t } = useTranslation();
-
-// Replace static text with t():
-// "Welcome" → {t('Welcome')}
-// "Dashboard" → {t('Dashboard')}
-// "Total Portfolio" → {t('Total Portfolio')}
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -34,6 +27,7 @@ ChartJS.register(
 );
 
 const OfficerDashboard = ({ user }) => {
+  const { t } = useTranslation();
   const { data: loans, isLoading: loansLoading } = useQuery({
     queryKey: ['my-loans'],
     queryFn: () => loanAPI.getAll({ limit: 20 }),

@@ -2,14 +2,6 @@ import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-
-// Inside the component:
-const { t } = useTranslation();
-
-// Replace static text with t():
-// "Welcome" → {t('Welcome')}
-// "Dashboard" → {t('Dashboard')}
-// "Total Portfolio" → {t('Total Portfolio')}
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -43,6 +35,7 @@ ChartJS.register(
 );
 
 const AdminDashboard = ({ user }) => {
+  const { t } = useTranslation();
   const [dateRange] = useState({
     start: new Date(new Date().setDate(new Date().getDate() - 30)).toISOString().slice(0, 10),
     end: new Date().toISOString().slice(0, 10),
