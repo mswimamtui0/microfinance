@@ -1,6 +1,7 @@
 // Add this line at the top
 import './i18n/index';
 
+
 // Your existing code...
 import React from 'react';
 import ReactDOM from 'react-dom/client';
