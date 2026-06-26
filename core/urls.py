@@ -9,6 +9,7 @@ from rest_framework_simplejwt.views import TokenRefreshView, TokenVerifyView
 from accounts.views import CustomTokenObtainPairView, AuthViewSet
 from loans.views import LoanViewSet, LoanProductViewSet
 from customers.views import CustomerViewSet
+from customers.views_portal import CustomerAuthViewSet, CustomerPortalViewSet
 from payments.views import PaymentViewSet
 from reports.views import PortfolioReportView, CollectionsReportView
 
@@ -17,6 +18,11 @@ router.register(r'loans', LoanViewSet, basename='loan')
 router.register(r'loan-products', LoanProductViewSet, basename='loan-product')
 router.register(r'customers', CustomerViewSet, basename='customer')
 router.register(r'payments', PaymentViewSet, basename='payment')
+
+# Customer portal router
+customer_router = DefaultRouter()
+customer_router.register(r'auth', CustomerAuthViewSet, basename='customer-auth')
+customer_router.register(r'', CustomerPortalViewSet, basename='customer-portal')
 
 def home(request):
     return JsonResponse({
@@ -37,8 +43,14 @@ urlpatterns = [
     # Custom auth endpoints
     path('api/auth/', include('accounts.urls')),
     
+    
+    # Customer Portal endpoints
+    path('api/customer/', include(customer_router.urls)),
+    
     # API router
     path('api/', include(router.urls)),
+
+    path('api/', include('branches.urls')),
     
     # Reports
     path('api/reports/portfolio/', PortfolioReportView.as_view(), name='portfolio-report'),

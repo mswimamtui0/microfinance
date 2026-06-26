@@ -21,33 +21,32 @@ class LoanViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     
     def get_queryset(self):
-    queryset = super().get_queryset()
-    user = self.request.user
-    
-    # Admin can see all loans
-    if user.is_superuser or user.role == 'admin':
-        pass
-    # Manager sees only their branch
-    elif user.role == 'manager':
-        if user.branch:
-            queryset = queryset.filter(branch=user.branch)
-        else:
-            queryset = queryset.none()
-    # Officer sees only loans they created
-    elif user.role == 'officer':
-        queryset = queryset.filter(created_by=user)
-    # Teller sees all loans in their branch
-    elif user.role == 'teller':
-        if user.branch:
-            queryset = queryset.filter(branch=user.branch)
-        else:
-            queryset = queryset.none()
-    # Viewer sees all loans (read-only)
-    elif user.role == 'viewer':
-        pass
-    
-    return queryset
-
+        queryset = super().get_queryset()
+        user = self.request.user
+        
+        # Admin can see all loans
+        if user.is_superuser or user.role == 'admin':
+            pass
+        # Manager sees only their branch
+        elif user.role == 'manager':
+            if user.branch:
+                queryset = queryset.filter(branch=user.branch)
+            else:
+                queryset = queryset.none()
+        # Officer sees only loans they created
+        elif user.role == 'officer':
+            queryset = queryset.filter(created_by=user)
+        # Teller sees all loans in their branch
+        elif user.role == 'teller':
+            if user.branch:
+                queryset = queryset.filter(branch=user.branch)
+            else:
+                queryset = queryset.none()
+        # Viewer sees all loans (read-only)
+        elif user.role == 'viewer':
+            pass
+        
+        return queryset
     
     @transaction.atomic
     def create(self, request, *args, **kwargs):
@@ -157,8 +156,6 @@ class LoanViewSet(viewsets.ModelViewSet):
                 logger.info(f"Schedule generated for loan: {loan.loan_no}")
             except Exception as e:
                 logger.error(f"Error generating schedule: {str(e)}")
-                # Still return the loan even if schedule generation fails
-                # The schedule can be generated later
             
             # Get serialized loan
             serializer = self.get_serializer(loan)
@@ -181,75 +178,68 @@ class LoanViewSet(viewsets.ModelViewSet):
         return Response(summary)
     
     @action(detail=True, methods=['get'])
-def realtime_status(self, request, pk=None):
-    """Get real-time loan status"""
-    loan = self.get_object()
-    
-    # Calculate real-time status manually
-    from datetime import date, timedelta
-    from decimal import Decimal
-    
-    today = date.today()
-    
-    # Get loan details
-    total_payable = float(loan.total_payable)
-    amount_paid = float(loan.amount_paid)
-    outstanding = float(loan.outstanding_balance)
-    
-    # Calculate days
-    if loan.disbursement_date:
-        days_elapsed = (today - loan.disbursement_date).days
-        total_days = loan.term_months * 30
-        days_remaining = max(0, total_days - days_elapsed)
-    else:
-        days_elapsed = 0
-        total_days = loan.term_months * 30
-        days_remaining = total_days
-    
-    # Calculate per second, minute, hour, day
-    if total_days > 0 and total_payable > 0:
-        per_day = total_payable / total_days
-        per_hour = per_day / 24
-        per_minute = per_hour / 60
-        per_second = per_minute / 60
-    else:
-        per_day = 0
-        per_hour = 0
-        per_minute = 0
-        per_second = 0
-    
-    # Get next due date
-    next_due = None
-    if loan.schedules.exists():
-        next_schedule = loan.schedules.filter(status='pending').first()
-        if next_schedule:
-            next_due = next_schedule.due_date
+    def realtime_status(self, request, pk=None):
+        """Get real-time loan status"""
+        loan = self.get_object()
+        
+        from datetime import date, timedelta
+        
+        today = date.today()
+        
+        total_payable = float(loan.total_payable)
+        amount_paid = float(loan.amount_paid)
+        outstanding = float(loan.outstanding_balance)
+        
+        if loan.disbursement_date:
+            days_elapsed = (today - loan.disbursement_date).days
+            total_days = loan.term_months * 30
+            days_remaining = max(0, total_days - days_elapsed)
         else:
-            # Check if any schedule exists
-            last_schedule = loan.schedules.last()
-            if last_schedule:
-                next_due = last_schedule.due_date
-    
-    return Response({
-        'loan_id': loan.id,
-        'loan_no': loan.loan_no,
-        'status': loan.status,
-        'total_payable': total_payable,
-        'amount_paid': amount_paid,
-        'outstanding_balance': outstanding,
-        'per_second': per_second,
-        'per_minute': per_minute,
-        'per_hour': per_hour,
-        'per_day': per_day,
-        'time_elapsed': {
-            'days': days_elapsed,
-        },
-        'total_days': total_days,
-        'days_remaining': days_remaining,
-        'next_due_date': next_due,
-        'is_overdue': loan.is_overdue,
-        'days_overdue': loan.days_overdue,
-    })
+            days_elapsed = 0
+            total_days = loan.term_months * 30
+            days_remaining = total_days
+        
+        if total_days > 0 and total_payable > 0:
+            per_day = total_payable / total_days
+            per_hour = per_day / 24
+            per_minute = per_hour / 60
+            per_second = per_minute / 60
+        else:
+            per_day = 0
+            per_hour = 0
+            per_minute = 0
+            per_second = 0
+        
+        next_due = None
+        if loan.schedules.exists():
+            next_schedule = loan.schedules.filter(status='pending').first()
+            if next_schedule:
+                next_due = next_schedule.due_date
+            else:
+                last_schedule = loan.schedules.last()
+                if last_schedule:
+                    next_due = last_schedule.due_date
+        
+        return Response({
+            'loan_id': loan.id,
+            'loan_no': loan.loan_no,
+            'status': loan.status,
+            'total_payable': total_payable,
+            'amount_paid': amount_paid,
+            'outstanding_balance': outstanding,
+            'per_second': per_second,
+            'per_minute': per_minute,
+            'per_hour': per_hour,
+            'per_day': per_day,
+            'time_elapsed': {
+                'days': days_elapsed,
+            },
+            'total_days': total_days,
+            'days_remaining': days_remaining,
+            'next_due_date': next_due,
+            'is_overdue': loan.is_overdue,
+            'days_overdue': loan.days_overdue,
+        })
     
     @action(detail=True, methods=['post'])
     def calculate_early_repayment(self, request, pk=None):
@@ -273,7 +263,6 @@ def realtime_status(self, request, pk=None):
         """Approve a loan"""
         loan = self.get_object()
         
-        # Allow approval from either draft or pending status
         if loan.status not in ['draft', 'pending']:
             return Response({
                 'error': 'Loan can only be approved from draft or pending status'
@@ -301,17 +290,14 @@ def realtime_status(self, request, pk=None):
         loan.disbursed_by = request.user
         loan.disbursement_date = timezone.now().date()
         
-        # Calculate maturity date
         total_days = loan.term_months * 30
         loan.maturity_date = loan.disbursement_date + timezone.timedelta(days=total_days)
         
-        # Update first payment date
         period_days = loan.product.get_frequency_days()
         loan.first_payment_date = loan.disbursement_date + timezone.timedelta(days=period_days)
         
         loan.save()
         
-        # Update schedules
         schedules = loan.schedules.all()
         period_days = loan.product.get_frequency_days()
         

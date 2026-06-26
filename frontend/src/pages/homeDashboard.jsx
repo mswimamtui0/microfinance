@@ -1,10 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useQuery } from '@tanstack/react-query';
 import { reportAPI, loanAPI, customerAPI, paymentAPI } from '../api';
-import { useTranslation } from 'react-i18next';
-
-
 import { Link } from 'react-router-dom';
 import { 
   UsersIcon, 
@@ -16,6 +13,8 @@ import {
   UserGroupIcon,
   CheckCircleIcon,
   ClockIcon,
+  ArrowTrendingUpIcon,
+  ArrowTrendingDownIcon,
   PlusIcon,
   EyeIcon,
   DocumentArrowDownIcon
@@ -32,9 +31,9 @@ import {
   PointElement,
   LineElement
 } from 'chart.js';
-import { Bar, Doughnut } from 'react-chartjs-2';
+import { Bar, Doughnut, Line } from 'react-chartjs-2';
 import Loading from '../components/Common/Loading';
-import { formatCurrency } from '../utils/formatters';
+import { formatCurrency, formatDate } from '../utils/formatters';
 
 // Register ChartJS components
 ChartJS.register(
@@ -50,9 +49,8 @@ ChartJS.register(
 );
 
 const HomeDashboard = () => {
-  const { t } = useTranslation();
   const { user } = useAuth();
-  const [dateRange] = useState({
+  const [dateRange, setDateRange] = useState({
     start: new Date(new Date().setDate(new Date().getDate() - 30)).toISOString().slice(0, 10),
     end: new Date().toISOString().slice(0, 10),
   });
@@ -61,25 +59,21 @@ const HomeDashboard = () => {
   const { data: portfolio, isLoading: portfolioLoading } = useQuery({
     queryKey: ['portfolio-report', dateRange],
     queryFn: () => reportAPI.getPortfolio(dateRange),
-    enabled: !!user,
   });
 
   const { data: loans, isLoading: loansLoading } = useQuery({
     queryKey: ['recent-loans'],
     queryFn: () => loanAPI.getAll({ limit: 5 }),
-    enabled: !!user,
   });
 
   const { data: customers, isLoading: customersLoading } = useQuery({
     queryKey: ['recent-customers'],
     queryFn: () => customerAPI.getAll({ limit: 5 }),
-    enabled: !!user,
   });
 
   const { data: paymentSummary, isLoading: paymentLoading } = useQuery({
     queryKey: ['payment-summary'],
     queryFn: () => paymentAPI.getSummary(),
-    enabled: !!user,
   });
 
   if (portfolioLoading || loansLoading || customersLoading || paymentLoading) {
@@ -249,7 +243,7 @@ const HomeDashboard = () => {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">
-              Welcome back, {user?.first_name || user?.username}! 
+              Welcome back, {user?.first_name || user?.username}! 👋
             </h1>
             <p className="text-gray-600 mt-1">
               {getWelcomeMessage()} • {user?.branch_name || 'All Branches'}
@@ -266,12 +260,12 @@ const HomeDashboard = () => {
             </div>
           </div>
           <div className="flex space-x-3 mt-4 md:mt-0">
-            <Link to="/loans/new" className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors text-sm font-medium">
-
+            <button className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors text-sm font-medium">
+              <PlusIcon className="w-4 h-4 inline mr-1" />
               New Loan
-            </Link>
+            </button>
             <button className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium">
-
+              <DocumentArrowDownIcon className="w-4 h-4 inline mr-1" />
               Export Report
             </button>
           </div>
@@ -299,7 +293,7 @@ const HomeDashboard = () => {
                   </div>
                 </div>
                 <div className={`${stat.color} p-3 rounded-xl`}>
-
+                  <Icon className="w-6 h-6 text-white" />
                 </div>
               </div>
             </div>
@@ -320,7 +314,7 @@ const HomeDashboard = () => {
                 className="flex flex-col items-center p-4 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors group"
               >
                 <div className={`${action.color} p-3 rounded-xl group-hover:scale-105 transition-transform`}>
-
+                  <Icon className="w-6 h-6 text-white" />
                 </div>
                 <span className="text-sm font-medium text-gray-700 mt-2">{action.name}</span>
               </Link>

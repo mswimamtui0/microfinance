@@ -1,4 +1,3 @@
-# In reports/views.py
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
@@ -12,36 +11,13 @@ class PortfolioReportView(APIView):
     permission_classes = [IsAuthenticated]
     
     def get(self, request):
-        user = request.user
+        # Get date range from query params
         start_date = request.query_params.get('start_date')
         end_date = request.query_params.get('end_date')
         
-        # Base queryset with branch filtering
+        # Base queryset
         loans = Loan.objects.all()
         payments = Payment.objects.filter(status='completed')
-        
-        # Filter by user role
-        if user.is_superuser or user.role == 'admin':
-            pass
-        elif user.role == 'manager':
-            if user.branch:
-                loans = loans.filter(branch=user.branch)
-                payments = payments.filter(loan__branch=user.branch)
-            else:
-                loans = loans.none()
-                payments = payments.none()
-        elif user.role == 'officer':
-            loans = loans.filter(created_by=user)
-            payments = payments.filter(loan__created_by=user)
-        elif user.role == 'teller':
-            if user.branch:
-                loans = loans.filter(branch=user.branch)
-                payments = payments.filter(loan__branch=user.branch)
-            else:
-                loans = loans.none()
-                payments = payments.none()
-        elif user.role == 'viewer':
-            pass
         
         if start_date:
             loans = loans.filter(disbursement_date__gte=start_date)
@@ -73,14 +49,67 @@ class PortfolioReportView(APIView):
         overdue_rate = (overdue_loans / total_loans * 100) if total_loans > 0 else 0
         default_rate = (defaulted_loans / total_loans * 100) if total_loans > 0 else 0
         
+        # PAR 30 (Portfolio at Risk > 30 days)
+        par_30 = loans.filter(
+            is_overdue=True,
+            days_overdue__gte=30
+        ).count()
+        par_30_rate = (par_30 / total_loans * 100) if total_loans > 0 else 0
+        
         return Response({
             'total_portfolio': total_portfolio,
             'active_loans': active_loans,
             'total_customers': total_customers,
             'collection_rate': round(collection_rate, 2),
+            'total_collected': total_collected,
+            'expected_collections': expected_collections,
             'performing': round(performing_rate, 2),
             'overdue_rate': round(overdue_rate, 2),
             'default_rate': round(default_rate, 2),
+            'par_30': round(par_30_rate, 2),
             'overdue_loans': overdue_loans,
             'defaulted_loans': defaulted_loans,
+        })
+
+
+class CollectionsReportView(APIView):
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request):
+        start_date = request.query_params.get('start_date')
+        end_date = request.query_params.get('end_date')
+        
+        payments = Payment.objects.filter(status='completed')
+        
+        if start_date:
+            payments = payments.filter(payment_date__date__gte=start_date)
+        if end_date:
+            payments = payments.filter(payment_date__date__lte=end_date)
+        
+        total_collected = payments.aggregate(total=Sum('amount_paid'))['total'] or 0
+        
+        expected = Loan.objects.filter(status='active').aggregate(
+            total=Sum('total_payable')
+        )['total'] or 0
+        
+        overdue_amount = Loan.objects.filter(
+            is_overdue=True
+        ).aggregate(total=Sum('outstanding_balance'))['total'] or 0
+        
+        efficiency = (total_collected / expected * 100) if expected > 0 else 0
+        
+        from django.db.models.functions import TruncMonth
+        
+        monthly_collections = payments.annotate(
+            month=TruncMonth('payment_date')
+        ).values('month').annotate(
+            total=Sum('amount_paid')
+        ).order_by('month')
+        
+        return Response({
+            'expected': expected,
+            'actual': total_collected,
+            'efficiency': round(efficiency, 2),
+            'overdue': overdue_amount,
+            'monthly_breakdown': monthly_collections,
         })

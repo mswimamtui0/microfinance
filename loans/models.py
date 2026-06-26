@@ -1,7 +1,9 @@
+# loans/models.py
 from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
 from decimal import Decimal
 from django.utils import timezone
+from django.conf import settings
 
 
 class LoanProduct(models.Model):
@@ -93,6 +95,14 @@ class LoanProduct(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='created_loan_products'  # ✅ FIXED - Unique
+    )
+    
     class Meta:
         db_table = 'loan_products'
         ordering = ['product_name']
@@ -101,7 +111,6 @@ class LoanProduct(models.Model):
         return f"{self.product_name} ({self.interest_rate}%)"
     
     def get_frequency_days(self):
-        """Get the number of days between payments"""
         if self.repayment_frequency == 'daily':
             return 1
         elif self.repayment_frequency == 'weekly':
@@ -113,7 +122,6 @@ class LoanProduct(models.Model):
         return 30
     
     def get_repayment_percentage(self):
-        """Get the percentage to pay per period"""
         return self.repayment_percentage / 100
 
 
@@ -160,27 +168,29 @@ class Loan(models.Model):
     notes = models.TextField(blank=True)
     
     approved_by = models.ForeignKey(
-        'accounts.User', 
+        settings.AUTH_USER_MODEL, 
         on_delete=models.SET_NULL, 
         null=True, 
         blank=True,
-        related_name='approved_loans'
+        related_name='approved_loan_products'  # ✅ FIXED - Unique
     )
+    
     disbursed_by = models.ForeignKey(
-        'accounts.User', 
+        settings.AUTH_USER_MODEL, 
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='disbursed_loans'
+        related_name='disbursed_loan_products'  # ✅ FIXED - Unique
     )
     
     created_by = models.ForeignKey(
-        'accounts.User', 
+        settings.AUTH_USER_MODEL, 
         on_delete=models.SET_NULL, 
         null=True, 
         blank=True,
-        related_name='created_loans'
+        related_name='created_loan_products_list'  # ✅ FIXED - Unique
     )
+    
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
@@ -198,7 +208,6 @@ class Loan(models.Model):
         return f"{self.loan_no} - {self.customer.full_name}"
     
     def calculate_total_interest(self):
-        """Calculate total interest based on method"""
         from decimal import Decimal
         
         principal = Decimal(str(self.principal))
@@ -206,15 +215,12 @@ class Loan(models.Model):
         term = Decimal(str(self.term_months))
         
         if self.interest_method == 'flat':
-            # Flat rate: Principal × Rate × Term
             return principal * rate * term
         else:
-            # Declining balance
             monthly_rate = rate / Decimal('12')
             if monthly_rate == 0:
                 return Decimal('0')
             
-            # Calculate monthly payment using annuity formula
             one_plus_r = Decimal('1') + monthly_rate
             denominator = Decimal('1') - (one_plus_r ** (-term))
             monthly_payment = (monthly_rate * principal) / denominator
@@ -224,17 +230,14 @@ class Loan(models.Model):
             return total_interest.quantize(Decimal('0.01'))
     
     def get_total_payable(self):
-        """Calculate total amount to repay"""
         self.total_interest = self.calculate_total_interest()
         self.total_payable = self.principal + self.total_interest
         return self.total_payable
     
     def get_payment_period_days(self):
-        """Get the number of days between payments"""
         return self.product.get_frequency_days()
     
     def get_number_of_payments(self):
-        """Get the total number of payments"""
         total_days = self.term_months * 30
         period_days = self.get_payment_period_days()
         if period_days == 0:
@@ -242,12 +245,10 @@ class Loan(models.Model):
         return total_days // period_days
     
     def get_payment_amount(self):
-        """Get the amount due per payment period"""
         percentage = self.product.get_repayment_percentage()
         return self.total_payable * Decimal(str(percentage))
     
     def calculate_schedule(self):
-        """Generate repayment schedule using the loan calculator"""
         from .utils.calculations import LoanCalculator
         
         calculator = LoanCalculator(
@@ -265,7 +266,6 @@ class Loan(models.Model):
         return schedule_data
     
     def update_outstanding(self):
-        """Update outstanding balance based on payments"""
         from django.db import models
         
         total_paid = self.payments.filter(status='completed').aggregate(
@@ -282,7 +282,6 @@ class Loan(models.Model):
         self.save()
     
     def check_overdue(self):
-        """Check if loan has overdue payments"""
         from django.utils import timezone
         today = timezone.now().date()
         
@@ -342,18 +341,15 @@ class LoanSchedule(models.Model):
         return self.status in ['pending', 'partial'] and self.due_date < timezone.now().date()
     
     def calculate_penalty(self, payment_date):
-        """Calculate penalty for this installment"""
         if payment_date <= self.due_date:
             return Decimal('0')
         
         days_overdue = (payment_date - self.due_date).days
         product = self.loan.product
         
-        # Check grace period
         if days_overdue <= product.grace_period_days:
             return Decimal('0')
         
-        # Calculate penalty
         from decimal import Decimal
         penalty_rate = Decimal(str(product.penalty_rate)) / Decimal('100')
         period_days = self.loan.get_payment_period_days()
@@ -365,7 +361,6 @@ class LoanSchedule(models.Model):
         return penalty.quantize(Decimal('0.01'))
     
     def mark_as_paid(self, amount=None, payment_date=None):
-        """Mark schedule as paid"""
         from django.utils import timezone
         from decimal import Decimal
         
@@ -375,11 +370,9 @@ class LoanSchedule(models.Model):
         if amount is None:
             amount = self.total_due
         
-        # Calculate penalty
         penalty = self.calculate_penalty(payment_date)
         self.penalty_amount = penalty
         
-        # Determine total due with penalty
         total_with_penalty = Decimal(str(self.total_due)) + penalty
         
         if amount >= total_with_penalty:
