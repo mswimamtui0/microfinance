@@ -25,9 +25,5 @@
       "src": "/(.*)",
       "dest": "core/wsgi.py"
     }
-  ],
-  "env": {
-    "DJANGO_SETTINGS_MODULE": "core.settings",
-    "PYTHONPATH": "/vercel/path0"
-  }
+  ]
 }
