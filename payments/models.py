@@ -1,55 +1,40 @@
+# payments/models.py
 from django.db import models
+from django.conf import settings
 
 class Payment(models.Model):
-    METHOD_CHOICES = [
-        ('cash', 'Cash'),
-        ('bank', 'Bank Transfer'),
-        ('mpesa', 'M-Pesa'),
-        ('airtel', 'Airtel Money'),
-        ('mixx', 'Mixx by Yas'),
-        ('cheque', 'Cheque'),
-        ('other', 'Other'),
-    ]
-    
-    STATUS_CHOICES = [
+    STATUS_CHOICES = (
         ('pending', 'Pending'),
         ('completed', 'Completed'),
-        ('partial', 'Partially Paid'),  # ADD THIS
         ('failed', 'Failed'),
-        ('reversed', 'Reversed'),
-    ]
+        ('refunded', 'Refunded'),
+    )
+    
+    METHOD_CHOICES = (
+        ('cash', 'Cash'),
+        ('bank_transfer', 'Bank Transfer'),
+        ('mobile_money', 'Mobile Money'),
+        ('card', 'Card'),
+    )
     
     loan = models.ForeignKey('loans.Loan', on_delete=models.CASCADE, related_name='payments')
-    schedule = models.ForeignKey('loans.LoanSchedule', on_delete=models.CASCADE, 
-                                 related_name='payments', null=True, blank=True)
-    
     amount_paid = models.DecimalField(max_digits=12, decimal_places=2)
-    principal_paid = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-    interest_paid = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-    penalty_paid = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    payment_method = models.CharField(max_length=20, choices=METHOD_CHOICES)
+    transaction_ref = models.CharField(max_length=100, unique=True, blank=True, null=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    payment_date = models.DateTimeField(auto_now_add=True)
+    notes = models.TextField(blank=True, null=True)
     
-    payment_method = models.CharField(max_length=10, choices=METHOD_CHOICES)
-    transaction_ref = models.CharField(max_length=50, unique=True)
-    payment_date = models.DateTimeField()
-    
-    received_by = models.ForeignKey('accounts.User', on_delete=models.SET_NULL, null=True,
-                                    related_name='received_payments')
-    notes = models.TextField(blank=True)
-    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='completed')
-    
-    msisdn = models.CharField(max_length=15, blank=True)
-    mpesa_receipt = models.CharField(max_length=20, blank=True)
-    
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-    
-    class Meta:
-        db_table = 'payments'
-        ordering = ['-payment_date']
-        indexes = [
-            models.Index(fields=['transaction_ref']),
-            models.Index(fields=['payment_date']),
-        ]
+    received_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='received_payments'
+    )
     
     def __str__(self):
-        return f"{self.transaction_ref} - {self.amount_paid}"
+        return f"{self.loan.loan_no} - {self.amount_paid} - {self.status}"
+    
+    class Meta:
+        ordering = ['-payment_date']

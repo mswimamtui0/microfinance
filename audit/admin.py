@@ -1,30 +1,23 @@
+# audit/admin.py
 from django.contrib import admin
 from .models import AuditLog
 
 @admin.register(AuditLog)
 class AuditLogAdmin(admin.ModelAdmin):
-    list_display = ['user', 'action', 'table_name', 'record_id', 'created_at']
-    list_filter = ['action', 'table_name', 'created_at']
-    search_fields = ['user__username', 'table_name', 'record_id']
-    readonly_fields = ['user', 'action', 'table_name', 'record_id', 'old_values', 'new_values', 'ip_address', 'user_agent', 'created_at']
+    list_display = ['id', 'user', 'action', 'model_name', 'created_at']
+    list_filter = ['action', 'model_name']
+    search_fields = ['user__username', 'model_name', 'object_id']
+    readonly_fields = ['created_at']
+    ordering = ['-created_at']
     
     fieldsets = (
         ('Audit Information', {
-            'fields': ('user', 'action', 'table_name', 'record_id')
+            'fields': ('user', 'action', 'model_name', 'object_id', 'changes')
         }),
-        ('Changes', {
-            'fields': ('old_values', 'new_values')
+        ('Request Information', {
+            'fields': ('ip_address', 'user_agent')
         }),
-        ('Metadata', {
-            'fields': ('ip_address', 'user_agent', 'created_at')
+        ('Timestamps', {
+            'fields': ('created_at',)
         }),
     )
-    
-    def has_add_permission(self, request):
-        return False
-    
-    def has_change_permission(self, request, obj=None):
-        return False
-    
-    def has_delete_permission(self, request, obj=None):
-        return False

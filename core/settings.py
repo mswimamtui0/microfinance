@@ -40,7 +40,7 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt',
     'corsheaders',
     'drf_yasg',
-    'accounts',
+    #'accounts',
     'branches',
     'customers',
     'loans',
