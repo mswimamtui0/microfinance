@@ -7,6 +7,27 @@ from decouple import config
 from django.http import HttpResponse
 from django.urls import path
 
+# core/settings.py - Add at the VERY BOTTOM
+
+import os
+import sys
+
+# Force SQLite on Render (free tier)
+if os.environ.get('RENDER'):
+    print("🔧 Running on Render - Using SQLite")
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
+    
+    # Create static directory if missing
+    STATIC_ROOT = BASE_DIR / 'staticfiles'
+    if not os.path.exists(STATIC_ROOT):
+        os.makedirs(STATIC_ROOT)
+        print(f"✅ Created static directory: {STATIC_ROOT}")
+
 def health_check(request):
     return HttpResponse("OK")
 
@@ -121,3 +142,20 @@ if not DEBUG:
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
     SECURE_HSTS_SECONDS = 31536000
+
+    # core/settings.py - Add to LOGGING
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'level': 'ERROR',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'ERROR',
+    },
+}
