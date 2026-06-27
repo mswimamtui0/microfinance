@@ -56,6 +56,7 @@ INSTALLED_APPS = [
     'payments',
     'notifications',
     'audit',
+    'django.contrib.staticfiles',
 ]
 
 MIDDLEWARE = [
