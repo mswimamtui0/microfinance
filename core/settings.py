@@ -91,6 +91,13 @@ WSGI_APPLICATION = 'core.wsgi.application'
 
 # Database
 # Use SQLite for development, PostgreSQL for production if available
+import os
+import sys
+from pathlib import Path
+import dj_database_url
+
+# Database Configuration
+# Use SQLite for development, PostgreSQL for production if available
 DATABASES = {
     'default': dj_database_url.config(
         default='sqlite:///' + str(BASE_DIR / 'db.sqlite3'),
@@ -98,6 +105,13 @@ DATABASES = {
         ssl_require=False
     )
 }
+
+# If on Render, use a persistent SQLite path if possible
+if os.environ.get('RENDER'):
+    DATABASES['default'] = {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': '/tmp/db.sqlite3',  # Use /tmp which is writable on Render
+    }
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
