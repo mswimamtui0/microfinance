@@ -9,19 +9,6 @@ import dj_database_url
 from pathlib import Path
 from decouple import config
 
-# core/settings.py - Add at the VERY BOTTOM
-
-# Auto-run migrations on Render
-import sys
-if 'runserver' not in sys.argv and 'migrate' not in sys.argv:
-    try:
-        from django.core.management import call_command
-        print("🔄 Running migrations automatically...")
-        call_command('migrate', verbosity=0)
-        print("✅ Migrations completed!")
-    except Exception as e:
-        print(f"⚠️ Migration error: {e}")
-
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -45,7 +32,7 @@ INSTALLED_APPS = [
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
-    'django.contrib.staticfiles',
+    'django.contrib.staticfiles',  # ✅ Only once
     'rest_framework',
     'rest_framework_simplejwt',
     'corsheaders',
@@ -56,20 +43,20 @@ INSTALLED_APPS = [
     'payments',
     'notifications',
     'audit',
-    'django.contrib.staticfiles',
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
-    'django.contrib.sessions.middleware.SessionMiddleware',  # ✅ MUST BE BEFORE AuthenticationMiddleware
+    'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
-    'django.contrib.auth.middleware.AuthenticationMiddleware',  # ✅ AFTER SessionMiddleware
+    'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
 ROOT_URLCONF = 'core.urls'
 
 TEMPLATES = [
@@ -92,13 +79,6 @@ WSGI_APPLICATION = 'core.wsgi.application'
 
 # Database
 # Use SQLite for development, PostgreSQL for production if available
-import os
-import sys
-from pathlib import Path
-import dj_database_url
-
-# Database Configuration
-# Use SQLite for development, PostgreSQL for production if available
 DATABASES = {
     'default': dj_database_url.config(
         default='sqlite:///' + str(BASE_DIR / 'db.sqlite3'),
@@ -106,13 +86,6 @@ DATABASES = {
         ssl_require=False
     )
 }
-
-# If on Render, use a persistent SQLite path if possible
-if os.environ.get('RENDER'):
-    DATABASES['default'] = {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': '/tmp/db.sqlite3',  # Use /tmp which is writable on Render
-    }
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
@@ -244,3 +217,16 @@ if DEBUG:
         INTERNAL_IPS = ['127.0.0.1']
     except ImportError:
         pass
+
+# ─────────────────────────────────────────────────────────────
+# ✅ FIX: Auto-run migrations on Render (but avoid duplicate errors)
+# ─────────────────────────────────────────────────────────────
+import sys
+if 'runserver' not in sys.argv and 'migrate' not in sys.argv:
+    try:
+        from django.core.management import call_command
+        print("🔄 Running migrations automatically...")
+        call_command('migrate', verbosity=0)
+        print("✅ Migrations completed!")
+    except Exception as e:
+        print(f"⚠️ Migration error: {e}")
