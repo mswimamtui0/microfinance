@@ -4,6 +4,17 @@ import dj_database_url
 from pathlib import Path
 from decouple import config
 
+from django.http import HttpResponse
+from django.urls import path
+
+def health_check(request):
+    return HttpResponse("OK")
+
+urlpatterns = [
+    path('health/', health_check, name='health_check'),
+    # ... your other URLs
+]
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Security
