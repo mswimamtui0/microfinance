@@ -22,6 +22,11 @@ if os.environ.get('RENDER'):
         }
     }
     
+    from pathlib import Path
+
+# Build paths inside the project like this: BASE_DIR / 'subdir'.
+BASE_DIR = Path(__file__).resolve().parent.parent
+
     # Create static directory if missing
     STATIC_ROOT = BASE_DIR / 'staticfiles'
     if not os.path.exists(STATIC_ROOT):
@@ -104,10 +109,10 @@ WSGI_APPLICATION = 'core.wsgi.application'
 
 # Database - Use PostgreSQL if available
 DATABASES = {
-    'default': dj_database_url.config(
-        default='sqlite:///db.sqlite3',
-        conn_max_age=600
-    )
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
+    }
 }
 
 # Static files
