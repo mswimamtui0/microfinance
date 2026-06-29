@@ -5,4 +5,4 @@ from .models import Branch
 class BranchSerializer(serializers.ModelSerializer):
     class Meta:
         model = Branch
-        fields = ['id', 'name', 'code', 'region', 'district', 'address', 'phone', 'is_active']
+        fields = '__all__'
