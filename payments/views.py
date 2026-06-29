@@ -154,3 +154,20 @@ class PaymentViewSet(viewsets.ModelViewSet):
             'today_collected': today_payments,
             'total_transactions': Payment.objects.filter(status='completed').count(),
         })
+
+        # payments/views.py
+from rest_framework import viewsets, permissions
+from .models import Payment
+from .serializers import PaymentSerializer
+
+class PaymentViewSet(viewsets.ModelViewSet):
+    queryset = Payment.objects.all()
+    serializer_class = PaymentSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        loan_id = self.request.query_params.get('loan')
+        if loan_id:
+            queryset = queryset.filter(loan_id=loan_id)
+        return queryset
