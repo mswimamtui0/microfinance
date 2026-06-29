@@ -73,7 +73,7 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-AUTH_USER_MODEL = 'auth.User'
+AUTH_USER_MODEL = 'customers.CustomUser'
 
 CORS_ALLOW_ALL_ORIGINS = True
 
