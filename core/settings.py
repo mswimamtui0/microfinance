@@ -1,4 +1,34 @@
 from pathlib import Path
+# core/settings.py - Add at the VERY BOTTOM
+
+# Auto-run migrations on startup (after Django is fully loaded)
+import sys
+import os
+
+def run_startup_tasks():
+    """Run migrations and create superuser after Django is ready"""
+    if 'runserver' not in sys.argv and 'migrate' not in sys.argv:
+        try:
+            from django.core.management import call_command
+            print("Running migrations...")
+            call_command('migrate', verbosity=0)
+            print("Migrations completed!")
+            
+            # Create superuser if missing
+            from django.contrib.auth import get_user_model
+            User = get_user_model()
+            if not User.objects.filter(username='admin').exists():
+                User.objects.create_superuser(
+                    username='admin',
+                    email='admin@example.com',
+                    password='admin123'
+                )
+                print("Superuser created!")
+        except Exception as e:
+            print(f"Startup task error: {e}")
+
+# Run startup tasks
+run_startup_tasks()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
