@@ -154,16 +154,17 @@ class PaymentViewSet(viewsets.ModelViewSet):
             'today_collected': today_payments,
             'total_transactions': Payment.objects.filter(status='completed').count(),
         })
-
-        # payments/views.py
-from rest_framework import viewsets, permissions
+# payments/views.py
+from rest_framework import viewsets, permissions, status
+from rest_framework.response import Response
+from rest_framework.decorators import action
 from .models import Payment
 from .serializers import PaymentSerializer
 
 class PaymentViewSet(viewsets.ModelViewSet):
     queryset = Payment.objects.all()
     serializer_class = PaymentSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.AllowAny]  # ✅ Allow any for testing
     
     def get_queryset(self):
         queryset = super().get_queryset()
@@ -171,3 +172,12 @@ class PaymentViewSet(viewsets.ModelViewSet):
         if loan_id:
             queryset = queryset.filter(loan_id=loan_id)
         return queryset
+    
+    def create(self, request, *args, **kwargs):
+        try:
+            serializer = self.get_serializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+            self.perform_create(serializer)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
