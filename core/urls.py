@@ -58,7 +58,7 @@ def deploy_view(request):
 urlpatterns = [
     path('', home, name='home'),
     path('admin/', admin.site.urls),
-    path('admin/', admin.site.urls),  
+     
     path('deploy/', deploy_view, name='deploy'),
     
     # JWT Authentication endpoints - FIXED: Use TokenObtainPairView directly
@@ -78,4 +78,7 @@ urlpatterns = [
     # Reports
     path('api/reports/portfolio/', PortfolioReportView.as_view(), name='portfolio-report'),
     path('api/reports/collections/', CollectionsReportView.as_view(), name='collections-report'),
-] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+] 
+
+if settings.DEBUG:
+    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
