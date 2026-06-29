@@ -10,6 +10,18 @@ from decouple import config
 
 # core/settings.py - Add at the VERY BOTTOM
 
+# core/settings.py - Add at the VERY BOTTOM
+
+# Serve static files directly (skip collectstatic)
+if not DEBUG:
+    import os
+    STATIC_ROOT = BASE_DIR / 'staticfiles'
+    STATIC_URL = '/static/'
+    
+    # Ensure static directory exists
+    if not os.path.exists(STATIC_ROOT):
+        os.makedirs(STATIC_ROOT)
+
 # Auto-run migrations on startup (after Django is fully loaded)
 import sys
 import os
