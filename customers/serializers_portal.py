@@ -40,8 +40,16 @@ class CustomerRegistrationSerializer(serializers.Serializer):
         if len(value) < 8:
             raise serializers.ValidationError("Password must be at least 8 characters")
         return value
+# customers/serializers_portal.py
+from rest_framework import serializers
+from django.contrib.auth import authenticate
+from .models import Customer, CustomUser
 
-     def validate(self, data):
+class CustomerLoginSerializer(serializers.Serializer):
+    username = serializers.CharField(max_length=150)
+    password = serializers.CharField(write_only=True)
+    
+    def validate(self, data):
         username = data.get('username')
         password = data.get('password')
         

@@ -115,7 +115,7 @@ class CustomerAuthViewSet(viewsets.GenericViewSet):
             'errors': serializer.errors
         }, status=status.HTTP_400_BAD_REQUEST)
     
-        @action(detail=False, methods=['post'])
+           @action(detail=False, methods=['post'])
     def login(self, request):
         """Login customer"""
         try:
@@ -127,7 +127,7 @@ class CustomerAuthViewSet(viewsets.GenericViewSet):
                     'error': 'Username and password are required'
                 }, status=status.HTTP_400_BAD_REQUEST)
             
-            # Authenticate user
+            # Try to authenticate
             user = authenticate(username=username, password=password)
             
             if user is None:
@@ -135,13 +135,41 @@ class CustomerAuthViewSet(viewsets.GenericViewSet):
                     'error': 'Invalid credentials'
                 }, status=status.HTTP_401_UNAUTHORIZED)
             
-            # Get customer
+            # Get the phone number - handle both username and phone fields
+            phone = None
+            if hasattr(user, 'phone') and user.phone:
+                phone = user.phone
+            else:
+                # Try to find customer by username
+                try:
+                    customer_by_phone = Customer.objects.filter(phone=username).first()
+                    if customer_by_phone:
+                        phone = customer_by_phone.phone
+                except:
+                    pass
+            
+            # Get customer by phone or create one
             try:
-                customer = Customer.objects.get(phone=user.phone)
+                if phone:
+                    customer = Customer.objects.get(phone=phone)
+                else:
+                    # Create customer if doesn't exist
+                    customer = Customer.objects.create(
+                        user=user,
+                        phone=username,
+                        first_name=user.first_name or 'User',
+                        last_name=user.last_name or 'Unknown',
+                        account_status='active'
+                    )
             except Customer.DoesNotExist:
-                return Response({
-                    'error': 'Customer profile not found'
-                }, status=status.HTTP_404_NOT_FOUND)
+                # Create customer if doesn't exist
+                customer = Customer.objects.create(
+                    user=user,
+                    phone=username,
+                    first_name=user.first_name or 'User',
+                    last_name=user.last_name or 'Unknown',
+                    account_status='active'
+                )
             
             # Generate tokens
             refresh = RefreshToken.for_user(user)
@@ -155,6 +183,7 @@ class CustomerAuthViewSet(viewsets.GenericViewSet):
                     'first_name': customer.first_name,
                     'last_name': customer.last_name,
                     'email': customer.email,
+                    'account_status': customer.account_status,
                 },
                 'tokens': {
                     'refresh': str(refresh),
