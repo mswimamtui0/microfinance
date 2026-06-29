@@ -14,6 +14,18 @@ from customers.views_portal import CustomerAuthViewSet, CustomerPortalViewSet
 from payments.views import PaymentViewSet
 from reports.views import PortfolioReportView, CollectionsReportView
 
+from django.http import HttpResponse
+from django.core.management import call_command
+
+def run_command(request, command):
+    try:
+        call_command(command)
+        return HttpResponse(f"Command '{command}' executed successfully.")
+    except Exception as e:
+        return HttpResponse(f"Error running command '{command}': {e}")
+
+# In urlpatterns, add:
+
 
 # ============================================
 # DEPLOY VIEW - Run migrations and create admin
@@ -96,6 +108,7 @@ urlpatterns = [
     path('api/auth/login/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/auth/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('api/auth/verify/', TokenVerifyView.as_view(), name='token_verify'),
+    path('run/<str:command>/', run_command, name='run_command'),
     
     # Customer Portal
     path('api/customer/', include(customer_router.urls)),
