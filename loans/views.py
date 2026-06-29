@@ -1,4 +1,5 @@
-from rest_framework import viewsets, status
+# loans/views.py
+from rest_framework import viewsets, status, permissions
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
@@ -6,7 +7,7 @@ from django.db import transaction
 from django.utils import timezone
 from django.http import JsonResponse
 from .models import Loan, LoanProduct, LoanSchedule
-from .serializers import LoanSerializer, LoanProductSerializer
+from .serializers import LoanSerializer, LoanProductSerializer, LoanScheduleSerializer
 from .utils.calculations import LoanCalculator, RepaymentScheduleGenerator
 from customers.models import Customer
 from decimal import Decimal
@@ -18,8 +19,7 @@ logger = logging.getLogger(__name__)
 class LoanViewSet(viewsets.ModelViewSet):
     queryset = Loan.objects.all()
     serializer_class = LoanSerializer
-    permission_classes = [IsAuthenticated]
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [IsAuthenticated]  # ✅ Only one permission_classes
     
     def get_queryset(self):
         queryset = super().get_queryset()
@@ -313,7 +313,6 @@ class LoanViewSet(viewsets.ModelViewSet):
         """Get loan repayment schedule"""
         loan = self.get_object()
         schedules = loan.schedules.all()
-        from .serializers import LoanScheduleSerializer
         serializer = LoanScheduleSerializer(schedules, many=True)
         return Response(serializer.data)
     
