@@ -7,6 +7,6 @@ djangorestframework-simplejwt==5.3.0
 gunicorn==20.1.0
 whitenoise==6.7.0
 dj-database-url==2.1.0
-drf-yasg==1.21.7
+# drf-yasg==1.21.7  # ✅ REMOVE THIS LINE
 Pillow==10.4.0
 python-dateutil==2.8.2
