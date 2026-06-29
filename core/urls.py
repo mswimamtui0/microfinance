@@ -1,4 +1,7 @@
 # core/urls.py
+# core/urls.py
+import django
+django.setup()  # ✅ This ensures Django is fully loaded
 from django.contrib import admin
 from django.urls import path, include
 from django.http import JsonResponse
