@@ -8,6 +8,26 @@ import dj_database_url
 from pathlib import Path
 from decouple import config
 
+# core/settings.py - Add at the VERY BOTTOM
+
+# Auto-run migrations on startup (after Django is fully loaded)
+import sys
+import os
+
+def run_migrations():
+    """Run migrations after Django is fully loaded"""
+    if 'runserver' not in sys.argv and 'migrate' not in sys.argv:
+        try:
+            from django.core.management import call_command
+            print("Running migrations...")
+            call_command('migrate', verbosity=0)
+            print("Migrations completed!")
+        except Exception as e:
+            print(f"Migration error: {e}")
+
+# Call this after all setup is complete
+run_migrations()
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
