@@ -36,6 +36,17 @@ def deploy_view(request):
         return HttpResponse(f"Error: {e}")
 
 
+        from django.http import HttpResponse
+from django.core.management import call_command
+
+def collectstatic_view(request):
+    try:
+        call_command('collectstatic', '--noinput', verbosity=0)
+        return HttpResponse("Static files collected successfully!")
+    except Exception as e:
+        return HttpResponse(f"Error collecting static files: {e}")
+
+
 # ============================================
 # HOME VIEW
 # ============================================
@@ -98,6 +109,7 @@ urlpatterns = [
     # Reports
     path('api/reports/portfolio/', PortfolioReportView.as_view(), name='portfolio-report'),
     path('api/reports/collections/', CollectionsReportView.as_view(), name='collections-report'),
+    path('collectstatic/', collectstatic_view, name='collectstatic'),
 ]
 
 # Serve static files in development
