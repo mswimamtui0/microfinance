@@ -32,7 +32,7 @@ INSTALLED_APPS = [
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
-    'django.contrib.staticfiles',  # ✅ Only once
+    'django.contrib.staticfiles',
     'rest_framework',
     'rest_framework_simplejwt',
     'corsheaders',
@@ -218,15 +218,15 @@ if DEBUG:
     except ImportError:
         pass
 
-# ─────────────────────────────────────────────────────────────
-# ✅ FIX: Auto-run migrations on Render (but avoid duplicate errors)
-# ─────────────────────────────────────────────────────────────
+# -----------------------------------------------------------------------------
+# FIX: Auto-run migrations on Render (No Emojis for Windows compatibility)
+# -----------------------------------------------------------------------------
 import sys
 if 'runserver' not in sys.argv and 'migrate' not in sys.argv:
     try:
         from django.core.management import call_command
-        print("🔄 Running migrations automatically...")
+        print("Running migrations automatically...")
         call_command('migrate', verbosity=0)
-        print("✅ Migrations completed!")
+        print("Migrations completed!")
     except Exception as e:
-        print(f"⚠️ Migration error: {e}")
+        print(f"Migration error: {e}")
