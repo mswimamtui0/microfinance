@@ -1,5 +1,22 @@
 from django.contrib import admin
 from django.urls import path, include
+from django.http import HttpResponse
+from django.core.management import call_command
+from django.shortcuts import redirect
+
+# Keep your existing deploy_view
+
+def admin_redirect(request):
+    return redirect('/admin/')
+
+urlpatterns = [
+    path('deploy/', deploy_view, name='deploy'),
+    path('admin/', admin.site.urls),
+    path('', admin_redirect),  # Redirect root to admin
+]
+
+from django.contrib import admin
+from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 from django.http import JsonResponse
