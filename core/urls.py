@@ -100,6 +100,26 @@ customer_router = DefaultRouter()
 customer_router.register(r'auth', CustomerAuthViewSet, basename='customer-auth')
 customer_router.register(r'', CustomerPortalViewSet, basename='customer-portal')
 
+# core/urls.py
+from django.contrib import admin
+from django.urls import path, include
+from django.http import JsonResponse
+
+# Add this view for /api/
+def api_root(request):
+    return JsonResponse({
+        'message': 'MicroFinance System API',
+        'version': '1.0.0',
+        'endpoints': {
+            'admin': '/admin/',
+            'customer': '/api/customer/',
+            'loans': '/api/loans/',
+            'branches': '/api/branches/',
+            'payments': '/api/payments/',
+            'auth': '/api/auth/',
+            'reports': '/api/reports/',
+        }
+    })
 
 # ============================================
 # URL PATTERNS
@@ -113,6 +133,7 @@ urlpatterns = [
     
     # Deploy - Run migrations
     path('deploy/', deploy_view, name='deploy'),
+     path('api/', api_root, name='api-root'),
     
     # JWT Authentication
     path('api/auth/login/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
