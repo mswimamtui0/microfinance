@@ -32,11 +32,34 @@ def home(request):
         'version': '1.0.0',
         'status': 'running'
     })
+    from django.contrib import admin
+from django.urls import path, include
+from django.http import HttpResponse
+from django.core.management import call_command
+
+def deploy_view(request):
+    """Run migrations and create superuser via URL"""
+    try:
+        call_command('migrate', verbosity=0)
+        
+        # Create superuser if not exists
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        if not User.objects.filter(username='admin').exists():
+            User.objects.create_superuser(
+                username='admin',
+                email='admin@example.com',
+                password='admin123'
+            )
+        return HttpResponse("Deployment successful! Admin created.")
+    except Exception as e:
+        return HttpResponse(f"Error: {e}")
 
 urlpatterns = [
     path('', home, name='home'),
     path('admin/', admin.site.urls),
     path('admin/', admin.site.urls),  
+    path('deploy/', deploy_view, name='deploy'),
     
     # JWT Authentication endpoints - FIXED: Use TokenObtainPairView directly
     path('api/auth/login/', TokenObtainPairView.as_view(), name='token_obtain_pair'),

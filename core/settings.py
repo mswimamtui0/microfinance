@@ -9,9 +9,10 @@ import dj_database_url
 from pathlib import Path
 from decouple import config
 
-# Database Configuration
+# core/settings.py - Add at the top
+import os
 
-
+# Force SQLite on Render
 if os.environ.get('RENDER'):
     DATABASES = {
         'default': {
