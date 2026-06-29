@@ -282,5 +282,3 @@ def run_startup_tasks():
             print(f"Startup task error: {e}")
 
 # Run startup tasks (only in production)
-if not DEBUG:
-    run_startup_tasks()
