@@ -9,6 +9,24 @@ import dj_database_url
 from pathlib import Path
 from decouple import config
 
+# Database Configuration
+
+
+if os.environ.get('RENDER'):
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': '/tmp/db.sqlite3',
+        }
+    }
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -79,25 +97,7 @@ WSGI_APPLICATION = 'core.wsgi.application'
 
 # Database
 # Use SQLite for development, PostgreSQL for production if available
- import os
-
-# Database Configuration
-if os.environ.get('RENDER'):
-    # Use SQLite on Render (free tier)
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': '/tmp/db.sqlite3',  # Writable location on Render
-        }
-    }
-else:
-    # Use SQLite locally
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / 'db.sqlite3',
-        }
-    }
+ 
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
