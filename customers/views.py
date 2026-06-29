@@ -1,3 +1,4 @@
+# customers/views.py
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -6,6 +7,7 @@ from django.db import models
 from django.utils import timezone
 from .models import Customer, Guarantor
 from .serializers import CustomerSerializer, GuarantorSerializer
+import uuid
 
 class CustomerViewSet(viewsets.ModelViewSet):
     queryset = Customer.objects.all()
@@ -20,22 +22,22 @@ class CustomerViewSet(viewsets.ModelViewSet):
         if user.is_superuser or user.role == 'admin':
             # Admin sees all customers
             pass
-        elif user.role == 'manager':
+        elif hasattr(user, 'role') and user.role == 'manager':
             # Manager sees only their branch customers
-            if user.branch:
+            if hasattr(user, 'branch') and user.branch:
                 queryset = queryset.filter(branch=user.branch)
             else:
                 queryset = queryset.none()  # No branch assigned
-        elif user.role == 'officer':
+        elif hasattr(user, 'role') and user.role == 'officer':
             # Officer sees only customers they created
             queryset = queryset.filter(created_by=user)
-        elif user.role == 'teller':
+        elif hasattr(user, 'role') and user.role == 'teller':
             # Teller sees all branch customers
-            if user.branch:
+            if hasattr(user, 'branch') and user.branch:
                 queryset = queryset.filter(branch=user.branch)
             else:
                 queryset = queryset.none()
-        elif user.role == 'viewer':
+        elif hasattr(user, 'role') and user.role == 'viewer':
             # Viewer sees all (read-only)
             pass
         
@@ -51,24 +53,29 @@ class CustomerViewSet(viewsets.ModelViewSet):
             )
         
         # Status filter
-        status = self.request.query_params.get('status')
-        if status:
-            queryset = queryset.filter(status=status)
+        account_status = self.request.query_params.get('account_status')
+        if account_status:
+            queryset = queryset.filter(account_status=account_status)
         
-        # Risk level filter
+        # Risk level filter (if field exists)
         risk_level = self.request.query_params.get('risk_level')
-        if risk_level:
+        if risk_level and hasattr(Customer, 'risk_level'):
             queryset = queryset.filter(risk_level=risk_level)
         
         return queryset
     
     def perform_create(self, serializer):
-        import uuid
         customer_no = f"CUST{timezone.now().strftime('%Y%m%d')}{uuid.uuid4().hex[:4].upper()}"
+        
+        # Get the user's branch if available
+        branch = None
+        if hasattr(self.request.user, 'branch'):
+            branch = self.request.user.branch
+        
         serializer.save(
             created_by=self.request.user,
             customer_no=customer_no,
-            branch=self.request.user.branch  # Auto-assign to user's branch
+            branch=branch  # Auto-assign to user's branch
         )
     
     @action(detail=True, methods=['get'])

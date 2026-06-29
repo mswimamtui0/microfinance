@@ -1,8 +1,10 @@
+# reports/views.py
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django.db.models import Sum, Count, Q
 from django.utils import timezone
+from django.db.models.functions import TruncMonth
 from loans.models import Loan
 from payments.models import Payment
 from customers.models import Customer
@@ -29,12 +31,12 @@ class PortfolioReportView(APIView):
         # Portfolio metrics
         total_portfolio = loans.aggregate(total=Sum('principal'))['total'] or 0
         active_loans = loans.filter(status='active').count()
-        total_customers = Customer.objects.filter(status='active').count()
+        total_customers = Customer.objects.count()  # ✅ FIXED: use count() not filter(status='active')
         
         # Collection metrics
         total_collected = payments.aggregate(total=Sum('amount_paid'))['total'] or 0
         expected_collections = loans.filter(status='active').aggregate(
-            total=Sum('total_payable')
+            total=Sum('outstanding_balance')  # ✅ FIXED: use outstanding_balance
         )['total'] or 0
         
         collection_rate = (total_collected / expected_collections * 100) if expected_collections > 0 else 0
@@ -57,12 +59,12 @@ class PortfolioReportView(APIView):
         par_30_rate = (par_30 / total_loans * 100) if total_loans > 0 else 0
         
         return Response({
-            'total_portfolio': total_portfolio,
+            'total_portfolio': float(total_portfolio),
             'active_loans': active_loans,
             'total_customers': total_customers,
             'collection_rate': round(collection_rate, 2),
-            'total_collected': total_collected,
-            'expected_collections': expected_collections,
+            'total_collected': float(total_collected),
+            'expected_collections': float(expected_collections),
             'performing': round(performing_rate, 2),
             'overdue_rate': round(overdue_rate, 2),
             'default_rate': round(default_rate, 2),
@@ -89,16 +91,14 @@ class CollectionsReportView(APIView):
         total_collected = payments.aggregate(total=Sum('amount_paid'))['total'] or 0
         
         expected = Loan.objects.filter(status='active').aggregate(
-            total=Sum('total_payable')
+            total=Sum('outstanding_balance')  # ✅ FIXED
         )['total'] or 0
         
         overdue_amount = Loan.objects.filter(
             is_overdue=True
-        ).aggregate(total=Sum('outstanding_balance'))['total'] or 0
+        ).aggregate(total=Sum('outstanding_balance'))['total'] or 0  # ✅ FIXED
         
         efficiency = (total_collected / expected * 100) if expected > 0 else 0
-        
-        from django.db.models.functions import TruncMonth
         
         monthly_collections = payments.annotate(
             month=TruncMonth('payment_date')
@@ -106,10 +106,19 @@ class CollectionsReportView(APIView):
             total=Sum('amount_paid')
         ).order_by('month')
         
+        # Convert monthly collections to list
+        monthly_data = []
+        for item in monthly_collections:
+            if item['month']:
+                monthly_data.append({
+                    'month': item['month'].strftime('%Y-%m'),
+                    'total': float(item['total'])
+                })
+        
         return Response({
-            'expected': expected,
-            'actual': total_collected,
+            'expected': float(expected),
+            'actual': float(total_collected),
             'efficiency': round(efficiency, 2),
-            'overdue': overdue_amount,
-            'monthly_breakdown': monthly_collections,
+            'overdue': float(overdue_amount),
+            'monthly_breakdown': monthly_data,
         })
