@@ -3,12 +3,20 @@ from django.contrib import admin
 from django.urls import path
 from django.http import JsonResponse
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+from rest_framework import status
+from django.contrib.auth import authenticate
+from rest_framework_simplejwt.tokens import RefreshToken
+import json
 
-# Simple home view
+# ============================================
+# VIEWS (Defined FIRST before URL patterns)
+# ============================================
+
 def home(request):
     return JsonResponse({'message': 'MicroFinance API', 'status': 'running'})
 
-# Simple API root
 def api_root(request):
     return JsonResponse({
         'message': 'MicroFinance API',
@@ -21,48 +29,16 @@ def api_root(request):
         }
     })
 
-urlpatterns = [
-    # Home
-    path('', home, name='home'),
-    path('api/', api_root, name='api-root'),
-    
-    # Admin
-    path('admin/', admin.site.urls),
-    
-    # Authentication - Simple JWT
-    path('api/auth/login/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
-    path('api/auth/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
-    
-    # App endpoints - Direct views (NO includes)
-    path('api/loans/', include_loans),
-    path('api/branches/', include_branches),
-    path('api/payments/', include_payments),
-    path('api/customer/', include_customer),
-]
-
-# ============================================
-# DIRECT VIEWS (No separate URL files needed)
-# ============================================
-
-from django.http import JsonResponse
-from rest_framework import status
-from rest_framework.response import Response
-from rest_framework.decorators import api_view
-from rest_framework_simplejwt.tokens import RefreshToken
-from django.contrib.auth import authenticate
-from django.views.decorators.csrf import csrf_exempt
-import json
-
-# ---------- LOANS ----------
+# ---------- LOANS VIEW ----------
 @api_view(['GET', 'POST'])
-def include_loans(request):
+def loans_view(request):
     if request.method == 'GET':
         return Response([{'id': 1, 'loan_no': 'LN-001', 'status': 'active'}])
     return Response({'message': 'Loan created'}, status=201)
 
-# ---------- BRANCHES ----------
+# ---------- BRANCHES VIEW ----------
 @api_view(['GET', 'POST'])
-def include_branches(request):
+def branches_view(request):
     if request.method == 'GET':
         return Response([
             {'id': 1, 'name': 'Dar es Salaam HQ', 'code': 'DSM001'},
@@ -70,36 +46,55 @@ def include_branches(request):
         ])
     return Response({'message': 'Branch created'}, status=201)
 
-# ---------- PAYMENTS ----------
+# ---------- PAYMENTS VIEW ----------
 @api_view(['GET', 'POST'])
-def include_payments(request):
+def payments_view(request):
     if request.method == 'GET':
         return Response([{'id': 1, 'amount': 100000, 'status': 'completed'}])
     return Response({'message': 'Payment created'}, status=201)
 
-# ---------- CUSTOMER ----------
+# ---------- CUSTOMER AUTH VIEW ----------
 @api_view(['POST'])
-def include_customer(request):
-    if request.method == 'POST':
-        try:
-            data = json.loads(request.body)
-            username = data.get('username')
-            password = data.get('password')
-            
-            if not username or not password:
-                return Response({'error': 'Username and password required'}, status=400)
-            
-            user = authenticate(username=username, password=password)
-            if not user:
-                return Response({'error': 'Invalid credentials'}, status=401)
-            
-            refresh = RefreshToken.for_user(user)
-            return Response({
-                'success': True,
-                'tokens': {
-                    'refresh': str(refresh),
-                    'access': str(refresh.access_token),
-                }
-            })
-        except:
-            return Response({'error': 'Invalid request'}, status=400)
+def customer_auth_view(request):
+    try:
+        data = json.loads(request.body)
+        username = data.get('username')
+        password = data.get('password')
+        
+        if not username or not password:
+            return Response({'error': 'Username and password required'}, status=400)
+        
+        user = authenticate(username=username, password=password)
+        if not user:
+            return Response({'error': 'Invalid credentials'}, status=401)
+        
+        refresh = RefreshToken.for_user(user)
+        return Response({
+            'success': True,
+            'tokens': {
+                'refresh': str(refresh),
+                'access': str(refresh.access_token),
+            }
+        })
+    except:
+        return Response({'error': 'Invalid request'}, status=400)
+
+# ============================================
+# URL PATTERNS
+# ============================================
+
+urlpatterns = [
+    path('', home, name='home'),
+    path('api/', api_root, name='api-root'),
+    path('admin/', admin.site.urls),
+    
+    # Authentication
+    path('api/auth/login/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('api/auth/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    
+    # App endpoints
+    path('api/loans/', loans_view, name='loans'),
+    path('api/branches/', branches_view, name='branches'),
+    path('api/payments/', payments_view, name='payments'),
+    path('api/customer/auth/login/', customer_auth_view, name='customer-auth'),
+]
