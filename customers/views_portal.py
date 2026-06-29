@@ -115,57 +115,58 @@ class CustomerAuthViewSet(viewsets.GenericViewSet):
             'errors': serializer.errors
         }, status=status.HTTP_400_BAD_REQUEST)
     
-    @action(detail=False, methods=['post'])
+        @action(detail=False, methods=['post'])
     def login(self, request):
         """Login customer"""
-        username = request.data.get('username')
-        password = request.data.get('password')
-        
-        if not username or not password:
-            return Response({
-                'error': 'Username and password required'
-            }, status=status.HTTP_400_BAD_REQUEST)
-        
         try:
-            customer = Customer.objects.get(phone=username)
-        except Customer.DoesNotExist:
+            username = request.data.get('username')
+            password = request.data.get('password')
+            
+            if not username or not password:
+                return Response({
+                    'error': 'Username and password are required'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Authenticate user
+            user = authenticate(username=username, password=password)
+            
+            if user is None:
+                return Response({
+                    'error': 'Invalid credentials'
+                }, status=status.HTTP_401_UNAUTHORIZED)
+            
+            # Get customer
+            try:
+                customer = Customer.objects.get(phone=user.phone)
+            except Customer.DoesNotExist:
+                return Response({
+                    'error': 'Customer profile not found'
+                }, status=status.HTTP_404_NOT_FOUND)
+            
+            # Generate tokens
+            refresh = RefreshToken.for_user(user)
+            
             return Response({
-                'error': 'Invalid credentials'
-            }, status=status.HTTP_401_UNAUTHORIZED)
-        
-        user = authenticate(username=username, password=password)
-        if user is None:
+                'success': True,
+                'message': 'Login successful',
+                'customer': {
+                    'id': customer.id,
+                    'phone': customer.phone,
+                    'first_name': customer.first_name,
+                    'last_name': customer.last_name,
+                    'email': customer.email,
+                },
+                'tokens': {
+                    'refresh': str(refresh),
+                    'access': str(refresh.access_token),
+                }
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            logger.error(f"Login error: {str(e)}")
             return Response({
-                'error': 'Invalid credentials'
-            }, status=status.HTTP_401_UNAUTHORIZED)
-        
-        if customer.account_status not in ['active', 'pending']:
-            return Response({
-                'error': 'Account not active'
-            }, status=status.HTTP_403_FORBIDDEN)
-        
-        customer.last_login = timezone.now()
-        customer.save()
-        
-        refresh = RefreshToken.for_user(user)
-        
-        return Response({
-            'success': True,
-            'message': 'Login successful!',
-            'customer': {
-                'id': customer.id,
-                'phone': customer.phone,
-                'first_name': customer.first_name,
-                'last_name': customer.last_name,
-                'email': customer.email,
-                'account_status': customer.account_status,
-            },
-            'tokens': {
-                'refresh': str(refresh),
-                'access': str(refresh.access_token),
-            }
-        }, status=status.HTTP_200_OK)
-
+                'error': f'Login failed: {str(e)}'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class CustomerPortalViewSet(viewsets.GenericViewSet):
     permission_classes = [IsAuthenticated]

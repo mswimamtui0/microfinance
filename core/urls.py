@@ -51,6 +51,7 @@ urlpatterns = [
     path('api/', include(router.urls)),
     path('api/customer/', include(customer_router.urls)),
     path('api/', include('branches.urls')),
+    
     path('api/reports/portfolio/', PortfolioReportView.as_view(), name='portfolio-report'),
     path('api/reports/collections/', CollectionsReportView.as_view(), name='collections-report'),
 ]

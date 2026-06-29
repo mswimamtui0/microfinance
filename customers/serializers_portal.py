@@ -41,13 +41,20 @@ class CustomerRegistrationSerializer(serializers.Serializer):
             raise serializers.ValidationError("Password must be at least 8 characters")
         return value
 
-    def validate(self, data):
-        """Validate passwords match"""
+     def validate(self, data):
+        username = data.get('username')
         password = data.get('password')
-        confirm_password = data.get('confirm_password')
         
-        if password and confirm_password and password != confirm_password:
-            raise serializers.ValidationError({"confirm_password": "Passwords do not match"})
+        if username and password:
+            user = authenticate(username=username, password=password)
+            if not user:
+                raise serializers.ValidationError('Invalid credentials')
+            if not user.is_active:
+                raise serializers.ValidationError('User account is disabled')
+        else:
+            raise serializers.ValidationError('Username and password are required')
+        
+        data['user'] = user
         return data
 
     def create(self, validated_data):
