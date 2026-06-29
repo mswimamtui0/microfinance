@@ -22,7 +22,6 @@ class CustomerAuthViewSet(viewsets.GenericViewSet):
     
     @action(detail=False, methods=['post'])
     def send_otp(self, request):
-        """Send OTP to customer's phone"""
         serializer = CustomerOTPSerializer(data=request.data)
         if serializer.is_valid():
             phone = serializer.validated_data['phone']
@@ -57,7 +56,6 @@ class CustomerAuthViewSet(viewsets.GenericViewSet):
     
     @action(detail=False, methods=['post'])
     def verify_otp(self, request):
-        """Verify OTP"""
         serializer = CustomerVerifyOTPSerializer(data=request.data)
         if serializer.is_valid():
             phone = serializer.validated_data['phone']
@@ -100,7 +98,6 @@ class CustomerAuthViewSet(viewsets.GenericViewSet):
     
     @action(detail=False, methods=['post'])
     def register(self, request):
-        """Register a new customer"""
         serializer = CustomerRegistrationSerializer(data=request.data)
         if serializer.is_valid():
             customer = serializer.save()
@@ -118,7 +115,6 @@ class CustomerAuthViewSet(viewsets.GenericViewSet):
     
     @action(detail=False, methods=['post'])
     def login(self, request):
-        """Login customer"""
         serializer = CustomerLoginSerializer(data=request.data)
         if serializer.is_valid():
             username = serializer.validated_data['username']
@@ -188,3 +184,56 @@ class CustomerPortalViewSet(viewsets.GenericViewSet):
             return Response({'error': 'Customer not found'}, status=404)
         serializer = CustomerProfileSerializer(customer)
         return Response(serializer.data)
+    
+    @action(detail=False, methods=['get'])
+    def dashboard(self, request):
+        customer = self.get_customer()
+        if not customer:
+            return Response({'error': 'Customer not found'}, status=404)
+        
+        loans = Loan.objects.filter(customer=customer)
+        
+        total_loans = loans.count()
+        active_loans = loans.filter(status='active').count()
+        total_borrowed = loans.aggregate(total=models.Sum('principal'))['total'] or 0
+        total_paid = loans.aggregate(total=models.Sum('amount_paid'))['total'] or 0
+        total_outstanding = loans.aggregate(total=models.Sum('outstanding_balance'))['total'] or 0
+        
+        next_payment = None
+        next_payment_amount = None
+        if loans.exists():
+            from loans.models import LoanSchedule
+            next_schedule = LoanSchedule.objects.filter(
+                loan__in=loans,
+                status='pending',
+                due_date__gte=timezone.now().date()
+            ).order_by('due_date').first()
+            if next_schedule:
+                next_payment = next_schedule.due_date
+                next_payment_amount = next_schedule.total_due
+        
+        recent_loans = loans.order_by('-created_at')[:5]
+        
+        return Response({
+            'profile': CustomerProfileSerializer(customer).data,
+            'summary': {
+                'total_loans': total_loans,
+                'active_loans': active_loans,
+                'total_borrowed': total_borrowed,
+                'total_paid': total_paid,
+                'total_outstanding': total_outstanding,
+                'next_payment': next_payment,
+                'next_payment_amount': next_payment_amount,
+            },
+            'recent_loans': [
+                {
+                    'id': loan.id,
+                    'loan_no': loan.loan_no,
+                    'principal': loan.principal,
+                    'outstanding_balance': loan.outstanding_balance,
+                    'status': loan.status,
+                    'maturity_date': loan.maturity_date,
+                }
+                for loan in recent_loans
+            ]
+        })
