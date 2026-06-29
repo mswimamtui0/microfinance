@@ -51,6 +51,16 @@ def deploy_view(request):
         from django.http import HttpResponse
 from django.core.management import call_command
 
+from django.http import HttpResponse
+from django.core.management import call_command
+
+def create_superuser_view(request):
+    try:
+        call_command('createsuperuser', '--noinput', username='admin', email='admin@example.com')
+        return HttpResponse("Superuser created. You can now log in.")
+    except Exception as e:
+        return HttpResponse(f"Error: {e}")
+
 def collectstatic_view(request):
     try:
         call_command('collectstatic', '--noinput', verbosity=0)
@@ -109,6 +119,7 @@ urlpatterns = [
     path('api/auth/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('api/auth/verify/', TokenVerifyView.as_view(), name='token_verify'),
     path('run/<str:command>/', run_command, name='run_command'),
+    path('create-admin/', create_superuser_view, name='create-admin'),
     
     # Customer Portal
     path('api/customer/', include(customer_router.urls)),
