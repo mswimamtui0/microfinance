@@ -2,6 +2,7 @@
 from django.urls import path, include
 from django.contrib import admin
 from django.urls import path
+from .views import home, options_handler
 from django.http import JsonResponse
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from rest_framework.decorators import api_view
@@ -95,6 +96,8 @@ urlpatterns = [
     path('api/', include('branches.urls')),
     path('api/', include('payments.urls')),
     path('api/<path:path>', options_handler),
+    
+    
     # Authentication
     path('api/auth/login/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/auth/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
