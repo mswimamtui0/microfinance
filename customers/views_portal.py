@@ -117,69 +117,67 @@ class CustomerAuthViewSet(viewsets.GenericViewSet):
         }, status=status.HTTP_400_BAD_REQUEST)
     
     @action(detail=False, methods=['post'])
-def login(self, request):
-    """Login customer"""
-    username = request.data.get('username')
-    password = request.data.get('password')
-    
-    print(f"🔐 Login attempt for: {username}")
-    
-    if not username or not password:
-        return Response(
-            {'error': 'Username and password required'},
-            status=status.HTTP_400_BAD_REQUEST
-        )
-    
-    try:
-        customer = Customer.objects.get(phone=username)
-        print(f"✅ Customer found: {customer.phone}")
-    except Customer.DoesNotExist:
-        print(f"❌ Customer not found: {username}")
-        return Response(
-            {'error': 'Invalid credentials'},
-            status=status.HTTP_401_UNAUTHORIZED
-        )
-    
-    user = authenticate(username=username, password=password)
-    print(f"🔑 Authentication result: {user}")
-    
-    if user is None:
-        print(f"❌ Authentication failed for: {username}")
-        return Response(
-            {'error': 'Invalid credentials'},
-            status=status.HTTP_401_UNAUTHORIZED
-        )
-    
-    if customer.account_status not in ['active', 'pending']:
-        return Response(
-            {'error': 'Account not active'},
-            status=status.HTTP_403_FORBIDDEN
-        )
-    
-    customer.last_login = timezone.now()
-    customer.save()
-    
-    refresh = RefreshToken.for_user(user)
-    
-    # ✅ Simple response structure
-    response_data = {
-        'success': True,
-        'message': 'Login successful!',
-        'customer': {
-            'id': customer.id,
-            'phone': customer.phone,
-            'first_name': customer.first_name,
-            'last_name': customer.last_name,
-            'email': customer.email,
-            'account_status': customer.account_status,
-        },
-        'access': str(refresh.access_token),
-        'refresh': str(refresh),
-    }
-    
-    print(f"✅ Sending response: {response_data}")
-    
-    return Response(response_data, status=status.HTTP_200_OK)
+    def login(self, request):
+        """Login customer"""
+        username = request.data.get('username')
+        password = request.data.get('password')
+        
+        print(f"🔐 Login attempt for: {username}")
+        
+        if not username or not password:
+            return Response({
+                'error': 'Username and password required'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            customer = Customer.objects.get(phone=username)
+            print(f"✅ Customer found: {customer.phone}")
+        except Customer.DoesNotExist:
+            print(f"❌ Customer not found: {username}")
+            return Response({
+                'error': 'Invalid credentials'
+            }, status=status.HTTP_401_UNAUTHORIZED)
+        
+        user = authenticate(username=username, password=password)
+        print(f"🔑 Authentication result: {user}")
+        
+        if user is None:
+            print(f"❌ Authentication failed for: {username}")
+            return Response({
+                'error': 'Invalid credentials'
+            }, status=status.HTTP_401_UNAUTHORIZED)
+        
+        if customer.account_status not in ['active', 'pending']:
+            return Response({
+                'error': 'Account not active'
+            }, status=status.HTTP_403_FORBIDDEN)
+        
+        customer.last_login = timezone.now()
+        customer.save()
+        
+        refresh = RefreshToken.for_user(user)
+        
+        response_data = {
+            'success': True,
+            'message': 'Login successful!',
+            'customer': {
+                'id': customer.id,
+                'phone': customer.phone,
+                'first_name': customer.first_name,
+                'last_name': customer.last_name,
+                'email': customer.email,
+                'account_status': customer.account_status,
+            },
+            'tokens': {
+                'refresh': str(refresh),
+                'access': str(refresh.access_token),
+            }
+        }
+        
+        print(f"✅ Sending response: {response_data}")
+        
+        return Response(response_data, status=status.HTTP_200_OK)
+
 
 class CustomerPortalViewSet(viewsets.GenericViewSet):
     permission_classes = [IsAuthenticated]
@@ -315,3 +313,64 @@ class CustomerPortalViewSet(viewsets.GenericViewSet):
                 'submitted_at': application.application_date,
             }
         }, status=status.HTTP_201_CREATED)
+    
+    @action(detail=False, methods=['get'])
+    def loans(self, request):
+        """Get all loans for customer"""
+        customer = self.get_customer()
+        if not customer:
+            return Response({'error': 'Customer not found'}, status=404)
+        
+        loans = Loan.objects.filter(customer=customer).order_by('-created_at')
+        
+        return Response([
+            {
+                'id': loan.id,
+                'loan_no': loan.loan_no,
+                'principal': loan.principal,
+                'outstanding_balance': loan.outstanding_balance,
+                'status': loan.status,
+                'maturity_date': loan.maturity_date,
+            }
+            for loan in loans
+        ])
+    
+    @action(detail=False, methods=['get'])
+    def payment_history(self, request):
+        """Get payment history for customer"""
+        customer = self.get_customer()
+        if not customer:
+            return Response({'error': 'Customer not found'}, status=404)
+        
+        payments = Payment.objects.filter(loan__customer=customer).order_by('-payment_date')
+        
+        return Response([
+            {
+                'id': payment.id,
+                'transaction_ref': payment.transaction_ref,
+                'amount_paid': payment.amount_paid,
+                'payment_method': payment.payment_method,
+                'payment_date': payment.payment_date,
+                'status': payment.status,
+            }
+            for payment in payments
+        ])
+    
+    @action(detail=False, methods=['get'])
+    def applications(self, request):
+        """Get all loan applications for customer"""
+        customer = self.get_customer()
+        if not customer:
+            return Response({'error': 'Customer not found'}, status=404)
+        
+        applications = CustomerLoanApplication.objects.filter(customer=customer).order_by('-created_at')
+        
+        return Response([
+            {
+                'id': app.id,
+                'amount': app.amount_requested,
+                'status': app.status,
+                'submitted_at': app.application_date,
+            }
+            for app in applications
+        ])
