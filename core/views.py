@@ -1,3 +1,4 @@
+# core/views.py
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 
@@ -15,7 +16,7 @@ def home(request):
     })
 
 @csrf_exempt
-def options_handler(request):
+def options_handler(request, path=None):  # ✅ Add path parameter
     """Handle OPTIONS requests for CORS preflight"""
     response = HttpResponse()
     response['Access-Control-Allow-Origin'] = '*'
