@@ -50,10 +50,11 @@ INSTALLED_APPS = [
     'audit',
 ]
 
-# core/settings.py
-
+# ============================================
+# Middleware Configuration
+# ============================================
 MIDDLEWARE = [
-    'core.middleware.CorsMiddleware',  # ✅ MUST BE FIRST
+    'core.middleware.CorsMiddleware',  # ✅ Custom CORS middleware - MUST BE FIRST
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
@@ -65,7 +66,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-# ✅ Disable trailing slash redirects to prevent redirects
+# ✅ Disable trailing slash redirects to prevent CORS preflight redirects
 APPEND_SLASH = False
 
 ROOT_URLCONF = 'core.urls'
@@ -89,15 +90,28 @@ TEMPLATES = [
 WSGI_APPLICATION = 'core.wsgi.application'
 
 # ============================================
-# Database
+# Database Configuration
 # ============================================
-DATABASES = {
-    'default': dj_database_url.config(
-        default='sqlite:///' + str(BASE_DIR / 'db.sqlite3'),
-        conn_max_age=600,
-        ssl_require=False
-    )
-}
+# Environment variable for Render
+IS_RENDER = os.environ.get('RENDER', False)
+
+if IS_RENDER:
+    # Use SQLite on Render (free tier compatible)
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
+else:
+    # Use DATABASE_URL if provided, otherwise SQLite
+    DATABASES = {
+        'default': dj_database_url.config(
+            default='sqlite:///' + str(BASE_DIR / 'db.sqlite3'),
+            conn_max_age=600,
+            ssl_require=False
+        )
+    }
 
 # ============================================
 # Password validation
@@ -150,7 +164,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 AUTH_USER_MODEL = 'customers.CustomUser'
 
 # ============================================
-# CORS Settings - ✅ FIXED
+# CORS Settings
 # ============================================
 # Allow all origins for testing (you can restrict later)
 CORS_ALLOW_ALL_ORIGINS = True
@@ -232,7 +246,7 @@ if not DEBUG:
     CSRF_COOKIE_SECURE = True
     SECURE_BROWSER_XSS_FILTER = True
     SECURE_CONTENT_TYPE_NOSNIFF = True
-    SECURE_HSTS_SECONDS = 31536000
+    SECURE_HSTS_SECONDS = 31536000  # 1 year
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SECURE_HSTS_PRELOAD = True
     X_FRAME_OPTIONS = 'DENY'
@@ -251,7 +265,7 @@ if DEBUG:
     SECURE_PROXY_SSL_HEADER = None
 
 # ============================================
-# Logging
+# Logging Configuration
 # ============================================
 LOG_DIR = BASE_DIR / 'logs'
 if not os.path.exists(LOG_DIR):
@@ -337,19 +351,4 @@ else:
             'handlers': ['console'],
             'level': 'INFO',
         },
-    }
-
-
-    # core/settings.py
-
-# Environment variable for Render
-IS_RENDER = os.environ.get('RENDER', False)
-
-if IS_RENDER:
-    # Use SQLite on Render
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / 'db.sqlite3',
-        }
     }
