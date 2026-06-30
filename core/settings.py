@@ -332,3 +332,18 @@ else:
             'level': 'INFO',
         },
     }
+
+
+    # core/settings.py
+
+# Environment variable for Render
+IS_RENDER = os.environ.get('RENDER', False)
+
+if IS_RENDER:
+    # Use SQLite on Render
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
