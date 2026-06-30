@@ -68,6 +68,7 @@ MIDDLEWARE = [
 
 # ✅ Disable trailing slash redirects to prevent CORS preflight redirects
 APPEND_SLASH = False
+APPEND_SLASH = False
 
 ROOT_URLCONF = 'core.urls'
 
