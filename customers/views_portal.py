@@ -117,67 +117,69 @@ class CustomerAuthViewSet(viewsets.GenericViewSet):
         }, status=status.HTTP_400_BAD_REQUEST)
     
     @action(detail=False, methods=['post'])
-    def login(self, request):
-        """Login customer"""
-        username = request.data.get('username')
-        password = request.data.get('password')
-        
-        print(f"🔐 Login attempt for: {username}")
-        
-        if not username or not password:
-            return Response({
-                'error': 'Username and password required'
-            }, status=status.HTTP_400_BAD_REQUEST)
-        
-        try:
-            customer = Customer.objects.get(phone=username)
-            print(f"✅ Customer found: {customer.phone}")
-        except Customer.DoesNotExist:
-            print(f"❌ Customer not found: {username}")
-            return Response({
-                'error': 'Invalid credentials'
-            }, status=status.HTTP_401_UNAUTHORIZED)
-        
-        user = authenticate(username=username, password=password)
-        print(f"🔑 Authentication result: {user}")
-        
-        if user is None:
-            print(f"❌ Authentication failed for: {username}")
-            return Response({
-                'error': 'Invalid credentials'
-            }, status=status.HTTP_401_UNAUTHORIZED)
-        
-        if customer.account_status not in ['active', 'pending']:
-            return Response({
-                'error': 'Account not active'
-            }, status=status.HTTP_403_FORBIDDEN)
-        
-        customer.last_login = timezone.now()
-        customer.save()
-        
-        refresh = RefreshToken.for_user(user)
-        
-        response_data = {
-            'success': True,
-            'message': 'Login successful!',
-            'customer': {
-                'id': customer.id,
-                'phone': customer.phone,
-                'first_name': customer.first_name,
-                'last_name': customer.last_name,
-                'email': customer.email,
-                'account_status': customer.account_status,
-            },
-            'tokens': {
-                'refresh': str(refresh),
-                'access': str(refresh.access_token),
-            }
-        }
-        
-        print(f"✅ Sending response: {response_data}")
-        
-        return Response(response_data, status=status.HTTP_200_OK)
-
+def login(self, request):
+    """Login customer"""
+    username = request.data.get('username')
+    password = request.data.get('password')
+    
+    print(f"🔐 Login attempt for: {username}")
+    
+    if not username or not password:
+        return Response(
+            {'error': 'Username and password required'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    try:
+        customer = Customer.objects.get(phone=username)
+        print(f"✅ Customer found: {customer.phone}")
+    except Customer.DoesNotExist:
+        print(f"❌ Customer not found: {username}")
+        return Response(
+            {'error': 'Invalid credentials'},
+            status=status.HTTP_401_UNAUTHORIZED
+        )
+    
+    user = authenticate(username=username, password=password)
+    print(f"🔑 Authentication result: {user}")
+    
+    if user is None:
+        print(f"❌ Authentication failed for: {username}")
+        return Response(
+            {'error': 'Invalid credentials'},
+            status=status.HTTP_401_UNAUTHORIZED
+        )
+    
+    if customer.account_status not in ['active', 'pending']:
+        return Response(
+            {'error': 'Account not active'},
+            status=status.HTTP_403_FORBIDDEN
+        )
+    
+    customer.last_login = timezone.now()
+    customer.save()
+    
+    refresh = RefreshToken.for_user(user)
+    
+    # ✅ Simple response structure
+    response_data = {
+        'success': True,
+        'message': 'Login successful!',
+        'customer': {
+            'id': customer.id,
+            'phone': customer.phone,
+            'first_name': customer.first_name,
+            'last_name': customer.last_name,
+            'email': customer.email,
+            'account_status': customer.account_status,
+        },
+        'access': str(refresh.access_token),
+        'refresh': str(refresh),
+    }
+    
+    print(f"✅ Sending response: {response_data}")
+    
+    return Response(response_data, status=status.HTTP_200_OK)
 
 class CustomerPortalViewSet(viewsets.GenericViewSet):
     permission_classes = [IsAuthenticated]
