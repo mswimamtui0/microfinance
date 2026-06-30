@@ -50,9 +50,11 @@ INSTALLED_APPS = [
     'audit',
 ]
 
+# core/settings.py
+
 MIDDLEWARE = [
-    'corsheaders.middleware.CorsMiddleware',
     'core.middleware.CorsMiddleware',  # ✅ MUST BE FIRST
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -62,6 +64,9 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
+# ✅ Disable trailing slash redirects to prevent redirects
+APPEND_SLASH = False
 
 ROOT_URLCONF = 'core.urls'
 
