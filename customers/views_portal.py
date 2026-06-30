@@ -22,6 +22,7 @@ class CustomerAuthViewSet(viewsets.GenericViewSet):
     
     @action(detail=False, methods=['post'])
     def send_otp(self, request):
+        """Send OTP to customer's phone"""
         serializer = CustomerOTPSerializer(data=request.data)
         if serializer.is_valid():
             phone = serializer.validated_data['phone']
@@ -56,6 +57,7 @@ class CustomerAuthViewSet(viewsets.GenericViewSet):
     
     @action(detail=False, methods=['post'])
     def verify_otp(self, request):
+        """Verify OTP"""
         serializer = CustomerVerifyOTPSerializer(data=request.data)
         if serializer.is_valid():
             phone = serializer.validated_data['phone']
@@ -98,6 +100,7 @@ class CustomerAuthViewSet(viewsets.GenericViewSet):
     
     @action(detail=False, methods=['post'])
     def register(self, request):
+        """Register a new customer"""
         serializer = CustomerRegistrationSerializer(data=request.data)
         if serializer.is_valid():
             customer = serializer.save()
@@ -112,7 +115,8 @@ class CustomerAuthViewSet(viewsets.GenericViewSet):
             'success': False,
             'errors': serializer.errors
         }, status=status.HTTP_400_BAD_REQUEST)
-        @action(detail=False, methods=['post'])
+    
+    @action(detail=False, methods=['post'])
     def login(self, request):
         """Login customer"""
         username = request.data.get('username')
@@ -174,10 +178,12 @@ class CustomerAuthViewSet(viewsets.GenericViewSet):
         
         return Response(response_data, status=status.HTTP_200_OK)
 
+
 class CustomerPortalViewSet(viewsets.GenericViewSet):
     permission_classes = [IsAuthenticated]
     
     def get_customer(self):
+        """Get customer from query params"""
         try:
             phone = self.request.query_params.get('phone')
             if phone:
@@ -188,6 +194,7 @@ class CustomerPortalViewSet(viewsets.GenericViewSet):
     
     @action(detail=False, methods=['get'])
     def profile(self, request):
+        """Get customer profile"""
         customer = self.get_customer()
         if not customer:
             return Response({'error': 'Customer not found'}, status=404)
@@ -196,6 +203,7 @@ class CustomerPortalViewSet(viewsets.GenericViewSet):
     
     @action(detail=False, methods=['get'])
     def dashboard(self, request):
+        """Get customer dashboard data"""
         customer = self.get_customer()
         if not customer:
             return Response({'error': 'Customer not found'}, status=404)
@@ -246,3 +254,62 @@ class CustomerPortalViewSet(viewsets.GenericViewSet):
                 for loan in recent_loans
             ]
         })
+    
+    @action(detail=False, methods=['post'])
+    def apply_loan(self, request):
+        """Apply for a new loan"""
+        customer = self.get_customer()
+        if not customer:
+            return Response({
+                'error': 'Customer not found'
+            }, status=status.HTTP_404_NOT_FOUND)
+        
+        data = request.data
+        
+        try:
+            product = LoanProduct.objects.get(id=data['product'], is_active=True)
+        except LoanProduct.DoesNotExist:
+            return Response({'error': 'Invalid loan product'}, status=400)
+        
+        amount = float(data.get('amount', 0))
+        if amount < product.min_amount or amount > product.max_amount:
+            return Response({
+                'error': f'Amount must be between {product.min_amount} and {product.max_amount}'
+            }, status=400)
+        
+        term = int(data.get('term_months', 0))
+        if term < product.min_term_months or term > product.max_term_months:
+            return Response({
+                'error': f'Term must be between {product.min_term_months} and {product.max_term_months} months'
+            }, status=400)
+        
+        # Create loan application
+        application = CustomerLoanApplication.objects.create(
+            customer=customer,
+            loan_type=data.get('loan_type', 'personal'),
+            amount_requested=amount,
+            amount_approved=amount,
+            interest_rate=product.interest_rate,
+            processing_fee=product.processing_fee,
+            term_months=term,
+            repayment_frequency=product.repayment_frequency,
+            purpose=data.get('purpose', ''),
+            description=data.get('business_description', ''),
+            guarantor_name=data.get('guarantor_name', ''),
+            guarantor_phone=data.get('guarantor_phone', ''),
+            guarantor_nida=data.get('guarantor_nida', ''),
+            guarantor_relationship=data.get('guarantor_relationship', ''),
+            status='pending'
+        )
+        
+        return Response({
+            'success': True,
+            'message': 'Loan application submitted successfully!',
+            'application': {
+                'id': application.id,
+                'amount': application.amount_requested,
+                'term_months': application.term_months,
+                'status': application.status,
+                'submitted_at': application.application_date,
+            }
+        }, status=status.HTTP_201_CREATED)
