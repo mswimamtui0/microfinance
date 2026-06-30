@@ -87,6 +87,12 @@ urlpatterns = [
     path('', home, name='home'),
     path('api/', api_root, name='api-root'),
     path('admin/', admin.site.urls),
+     path('', home, name='home'),
+    path('admin/', admin.site.urls),
+    path('api/auth/', include('customers.urls')),  # ✅ Make sure this is correct
+    path('api/', include('loans.urls')),
+    path('api/', include('branches.urls')),
+    path('api/', include('payments.urls')),
     
     # Authentication
     path('api/auth/login/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
