@@ -98,23 +98,28 @@ class CustomerAuthViewSet(viewsets.GenericViewSet):
         
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
-    @action(detail=False, methods=['post'])
-    def register(self, request):
-        """Register a new customer"""
-        serializer = CustomerRegistrationSerializer(data=request.data)
-        if serializer.is_valid():
-            customer = serializer.save()
-            return Response({
-                'success': True,
-                'message': 'Registration successful!',
-                'phone': customer.phone,
-                'customer_id': customer.id
-            }, status=status.HTTP_201_CREATED)
-        
+@action(detail=False, methods=['post'])
+def register(self, request):
+    """Register a new customer"""
+    print(f"📝 Registration attempt with data: {request.data}")
+    
+    serializer = CustomerRegistrationSerializer(data=request.data)
+    if serializer.is_valid():
+        customer = serializer.save()
+        print(f"✅ Registration successful for: {customer.phone}")
         return Response({
-            'success': False,
-            'errors': serializer.errors
-        }, status=status.HTTP_400_BAD_REQUEST)
+            'success': True,
+            'message': 'Registration successful!',
+            'phone': customer.phone,
+            'customer_id': customer.id
+        }, status=status.HTTP_201_CREATED)
+    
+    print(f"❌ Registration errors: {serializer.errors}")
+    return Response({
+        'success': False,
+        'errors': serializer.errors
+    }, status=status.HTTP_400_BAD_REQUEST)
+
     
     @action(detail=False, methods=['post'])
     def login(self, request):
