@@ -94,7 +94,7 @@ urlpatterns = [
     path('api/', include('loans.urls')),
     path('api/', include('branches.urls')),
     path('api/', include('payments.urls')),
-    
+    path('api/<path:path>', options_handler),
     # Authentication
     path('api/auth/login/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/auth/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
