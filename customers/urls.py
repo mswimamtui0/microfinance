@@ -1,6 +1,6 @@
 # customers/urls.py
 from django.urls import path, include
- 
+ from .views import home, options_handler
 from rest_framework.routers import DefaultRouter
 from .views_portal import CustomerAuthViewSet, CustomerPortalViewSet
 
@@ -10,6 +10,7 @@ router.register(r'', CustomerPortalViewSet, basename='customer-portal')
 
 urlpatterns = [
     path('', include(router.urls)),
+    path('api/<path:path>', options_handler),
   
 
 ]
